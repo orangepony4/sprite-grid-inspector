@@ -36,7 +36,7 @@ jobs:
         run: |
           stage="$RUNNER_TEMP/sprite-grid-inspector-pages"
           mkdir "$stage"
-          for file in index.html styles.css grid.js app.js; do
+          for file in index.html styles.css grid.js zip.js app.js; do
             test -f "$file"
             test ! -L "$file"
             cp -- "$file" "$stage/"

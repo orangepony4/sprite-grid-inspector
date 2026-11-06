@@ -9,11 +9,13 @@ Check how a PNG sprite sheet splits into frames before using it in a game. The b
 1. [Open Sprite Grid Inspector](https://orangepony4.github.io/sprite-grid-inspector/) or open `index.html` from a downloaded copy, then try the included demo or choose a PNG file.
 2. Set the cell width and height in pixels. Offsets move the start from the left and top edges, and gaps add space between cells.
 3. Apply the grid and choose a frame in the sheet or in the keyboard-accessible list.
-4. Download the selected cell as a PNG at its original size, or export the full grid as JSON.
+4. Download the selected cell as PNG, export the grid as JSON, or download all occupied cells and the manifest together as ZIP.
 
 Only full cells are included. A cell is empty when every pixel has zero alpha. The browser encodes the selected cell as a fresh PNG at its original dimensions and keeps its transparency. The preview may be scaled to fit.
 
 The JSON lists the source dimensions, grid settings, and frames in row-major order. Frame indexes, rows, and columns start at zero. Coordinates and nonempty bounds use source-image pixels measured from its top-left corner. Empty frames have `bounds: null`.
+
+The ZIP skips empty cells and uses their original one-based frame numbers in the PNG filenames. The manifest still describes every cell. The ZIP stores the PNGs without recompressing them.
 
 ## Limits
 

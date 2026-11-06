@@ -9,6 +9,7 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%2314322d'/%3E%3Cpath fill='%23bcf2ce' d='M11 11h11v11H11zm15 0h11v11H26zM11 26h11v11H11z'/%3E%3Cpath fill='%2345ad89' d='M26 26h11v11H26z'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
     <script src="grid.js" defer></script>
+    <script src="zip.js" defer></script>
     <script src="app.js" defer></script>
 </head>
 <body>
@@ -109,7 +110,10 @@
                     <h2 id="framesHeading">Frame inspector</h2>
                     <p id="gridSummary" class="status summary" role="status"></p>
                 </div>
-                <button class="button secondary" type="button" id="downloadManifest" disabled>Download JSON manifest</button>
+                <div class="export-actions">
+                    <button class="button secondary" type="button" id="downloadManifest" disabled>Download JSON manifest</button>
+                    <button class="button primary" type="button" id="downloadBatch" disabled>Download occupied frames</button>
+                </div>
             </div>
             <div class="frame-layout">
                 <div>

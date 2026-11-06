@@ -2,6 +2,7 @@
     'use strict';
 
     const { inspectPngHeader, makeGrid, inspectFrames } = globalThis.SpriteGrid;
+    const { buildStoredZip } = globalThis.SpriteZip;
     const byId = id => document.getElementById(id);
     const fileInput = byId('fileInput');
     const loadStatus = byId('loadStatus');
@@ -13,6 +14,7 @@
     const frameDetails = byId('frameDetails');
     const downloadFrame = byId('downloadFrame');
     const downloadManifest = byId('downloadManifest');
+    const downloadBatch = byId('downloadBatch');
     const exportStatus = byId('exportStatus');
     const defaults = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
     const settings = Object.keys(defaults).map(key => [key, byId(key)]);
@@ -24,6 +26,7 @@
     let frameButtons = [];
     let tabStop;
     let loadVersion = 0;
+    let batchPending = false;
 
     function createSourceCanvas(width, height) {
         const canvas = document.createElement('canvas');
@@ -75,13 +78,21 @@
     }
 
     function frameLabel(frame) {
-        return `Frame ${String(frame.index + 1).padStart(2, '0')}`;
+        return `Frame ${frameNumber(frame)}`;
+    }
+
+    function frameNumber(frame) {
+        return String(frame.index + 1).padStart(2, '0');
+    }
+
+    function frameFilename(frame) {
+        return `sprite-frame-${frameNumber(frame)}.png`;
     }
 
     function renderSelectedFrame(frame) {
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
-        exportStatus.textContent = '';
+        if (!batchPending) exportStatus.textContent = '';
         downloadFrame.disabled = !frame;
         frameCanvas.hidden = !frame;
         if (!frame) {
@@ -145,6 +156,7 @@
         const empty = frames.filter(frame => frame.empty).length;
         gridSummary.textContent = `${layout.columns} columns × ${layout.rows} rows · ${frames.length} frames · ${frames.length - empty} occupied · ${empty} empty`;
         downloadManifest.disabled = false;
+        refreshBatchButton();
         renderFrameList();
         renderSelectedFrame(frames[oldIndex] ?? frames[0]);
     }
@@ -160,6 +172,7 @@
         frameList.replaceChildren();
         gridSummary.textContent = 'Apply a valid grid to inspect frames.';
         downloadManifest.disabled = true;
+        refreshBatchButton();
         renderSelectedFrame(null);
         loadStatus.dataset.error = 'false';
         loadStatus.textContent = `${label} · ${width} × ${height} px`;
@@ -232,6 +245,28 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    function refreshBatchButton() {
+        downloadBatch.disabled = batchPending || !grid?.frames.some(frame => !frame.empty);
+    }
+
+    function manifestContent(image, currentGrid) {
+        const { frames, ...layout } = currentGrid;
+        const { width, height } = image;
+        const manifest = { image: { width, height }, grid: layout, frames };
+        return JSON.stringify(manifest, null, 2) + '\n';
+    }
+
+    async function frameBlob(canvas, frame) {
+        const crop = document.createElement('canvas');
+        crop.width = frame.width;
+        crop.height = frame.height;
+        crop.getContext('2d').drawImage(canvas, frame.x, frame.y, frame.width, frame.height,
+            0, 0, frame.width, frame.height);
+        const blob = await new Promise(resolve => crop.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error(`The browser could not encode ${frameLabel(frame)} as PNG.`);
+        return blob;
+    }
+
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         fileInput.value = '';
@@ -273,31 +308,46 @@
         if (frame) renderSelectedFrame(frame);
     });
 
-    downloadFrame.addEventListener('click', () => {
+    downloadFrame.addEventListener('click', async () => {
         if (!selected) return;
         const frame = selected;
-        const crop = document.createElement('canvas');
-        crop.width = frame.width;
-        crop.height = frame.height;
-        crop.getContext('2d').drawImage(source.canvas, frame.x, frame.y, frame.width, frame.height,
-            0, 0, frame.width, frame.height);
-        crop.toBlob(blob => {
-            if (!blob) {
-                exportStatus.textContent = 'The browser could not export this frame.';
-                return;
-            }
-            saveFile(blob, `sprite-frame-${String(frame.index + 1).padStart(2, '0')}.png`);
+        try {
+            const blob = await frameBlob(source.canvas, frame);
+            saveFile(blob, frameFilename(frame));
             exportStatus.textContent = `${frameLabel(frame)} exported as PNG.`;
-        }, 'image/png');
+        } catch (error) {
+            exportStatus.textContent = error.message;
+        }
     });
     downloadManifest.addEventListener('click', () => {
         if (!grid) return;
-        const { frames, ...layout } = grid;
-        const { width, height } = source;
-        const manifest = { image: { width, height }, grid: layout, frames };
-        const blob = new Blob([JSON.stringify(manifest, null, 2) + '\n'], { type: 'application/json' });
+        const blob = new Blob([manifestContent(source, grid)], { type: 'application/json' });
         saveFile(blob, 'sprite-grid.json');
         exportStatus.textContent = 'Grid exported as JSON.';
+    });
+    downloadBatch.addEventListener('click', async () => {
+        if (downloadBatch.disabled) return;
+        const canvas = source.canvas;
+        const frames = grid.frames.filter(frame => !frame.empty);
+        const manifest = new TextEncoder().encode(manifestContent(source, grid));
+        batchPending = true;
+        refreshBatchButton();
+        exportStatus.textContent = `Preparing ${frames.length} occupied frames…`;
+        try {
+            const entries = [];
+            for (const frame of frames) {
+                const png = await frameBlob(canvas, frame);
+                entries.push({ name: frameFilename(frame), bytes: new Uint8Array(await png.arrayBuffer()) });
+            }
+            entries.push({ name: 'sprite-grid.json', bytes: manifest });
+            saveFile(buildStoredZip(entries), 'sprite-frames.zip');
+            exportStatus.textContent = `Exported ${frames.length} PNG files and the grid manifest.`;
+        } catch (error) {
+            exportStatus.textContent = error.message;
+        } finally {
+            batchPending = false;
+            refreshBatchButton();
+        }
     });
 
     loadDemo();
