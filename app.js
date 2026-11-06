@@ -1,0 +1,304 @@
+(() => {
+    'use strict';
+
+    const { inspectPngHeader, makeGrid, inspectFrames } = globalThis.SpriteGrid;
+    const byId = id => document.getElementById(id);
+    const fileInput = byId('fileInput');
+    const loadStatus = byId('loadStatus');
+    const gridError = byId('gridError');
+    const gridSummary = byId('gridSummary');
+    const sheetCanvas = byId('sheetCanvas');
+    const frameCanvas = byId('frameCanvas');
+    const frameList = byId('frameList');
+    const frameDetails = byId('frameDetails');
+    const downloadFrame = byId('downloadFrame');
+    const downloadManifest = byId('downloadManifest');
+    const exportStatus = byId('exportStatus');
+    const defaults = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
+    const settings = Object.keys(defaults).map(key => [key, byId(key)]);
+    const byteLimit = 32 * 1024 * 1024;
+
+    let source;
+    let grid;
+    let selected;
+    let frameButtons = [];
+    let tabStop;
+    let loadVersion = 0;
+
+    function createSourceCanvas(width, height) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return { canvas, context: canvas.getContext('2d', { willReadFrequently: true }) };
+    }
+
+    function displayContext(canvas, width, height, maxWidth, maxHeight) {
+        const scale = Math.min(8, maxWidth / width, maxHeight / height);
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const context = canvas.getContext('2d');
+        context.imageSmoothingEnabled = false;
+        return context;
+    }
+
+    function renderSheet() {
+        const { canvas, width, height } = source;
+        const context = displayContext(sheetCanvas, width, height, 640, 400);
+        context.drawImage(canvas, 0, 0, sheetCanvas.width, sheetCanvas.height);
+        if (!grid) return;
+
+        const scaleX = sheetCanvas.width / width;
+        const scaleY = sheetCanvas.height / height;
+        const strokeFrame = frame => context.strokeRect(
+            frame.x * scaleX, frame.y * scaleY, frame.width * scaleX, frame.height * scaleY,
+        );
+        for (const frame of grid.frames) {
+            context.strokeStyle = frame.empty ? '#697185' : '#263852';
+            context.setLineDash(frame.empty ? [3, 3] : []);
+            strokeFrame(frame);
+        }
+        if (selected) {
+            context.setLineDash([]);
+            context.lineWidth = 4;
+            context.strokeStyle = '#172338';
+            strokeFrame(selected);
+            context.lineWidth = 2;
+            context.strokeStyle = '#FFE27A';
+            strokeFrame(selected);
+        }
+    }
+
+    function setTabStop(index) {
+        if (tabStop) tabStop.tabIndex = -1;
+        tabStop = frameButtons[index];
+        tabStop.tabIndex = 0;
+    }
+
+    function frameLabel(frame) {
+        return `Frame ${String(frame.index + 1).padStart(2, '0')}`;
+    }
+
+    function renderSelectedFrame(frame) {
+        if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
+        selected = frame;
+        exportStatus.textContent = '';
+        downloadFrame.disabled = !frame;
+        frameCanvas.hidden = !frame;
+        if (!frame) {
+            frameCanvas.width = 1;
+            frameCanvas.height = 1;
+            frameDetails.textContent = 'Apply a valid grid to select a frame.';
+            renderSheet();
+            return;
+        }
+
+        setTabStop(frame.index);
+        tabStop.setAttribute('aria-pressed', 'true');
+        const context = displayContext(frameCanvas, frame.width, frame.height, 192, 192);
+        context.drawImage(source.canvas, frame.x, frame.y, frame.width, frame.height,
+            0, 0, frameCanvas.width, frameCanvas.height);
+        const bounds = frame.bounds;
+        const content = bounds
+            ? `Visible bounds ${bounds.width} × ${bounds.height} px at (${bounds.x}, ${bounds.y}).`
+            : 'Empty frame. Every pixel is transparent.';
+        frameDetails.textContent = `${frameLabel(frame)} · ${frame.width} × ${frame.height} px at (${frame.x}, ${frame.y}). ${content}`;
+        renderSheet();
+    }
+
+    function renderFrameList() {
+        frameButtons = grid.frames.map(frame => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'frame-button';
+            button.dataset.index = String(frame.index);
+            button.dataset.empty = String(frame.empty);
+            button.tabIndex = -1;
+            button.setAttribute('aria-pressed', 'false');
+            const name = document.createElement('strong');
+            name.textContent = frameLabel(frame);
+            const badge = document.createElement('span');
+            badge.textContent = frame.empty ? 'Empty' : 'Occupied';
+            button.append(name, ' ', badge);
+            return button;
+        });
+        frameList.style.setProperty('--frame-columns', String(grid.columns));
+        frameList.replaceChildren(...frameButtons);
+        tabStop = null;
+    }
+
+    function applyGrid() {
+        const options = Object.fromEntries(settings.map(([key, input]) => [key, input.valueAsNumber]));
+        let layout;
+        let frames;
+        try {
+            layout = makeGrid(source.width, source.height, options);
+            frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
+        } catch (error) {
+            gridError.textContent = grid ? `${error.message} The previous grid is still shown.` : error.message;
+            return;
+        }
+
+        const oldIndex = selected?.index ?? 0;
+        selected = null;
+        grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
+        gridError.textContent = '';
+        const empty = frames.filter(frame => frame.empty).length;
+        gridSummary.textContent = `${layout.columns} columns × ${layout.rows} rows · ${frames.length} frames · ${frames.length - empty} occupied · ${empty} empty`;
+        downloadManifest.disabled = false;
+        renderFrameList();
+        renderSelectedFrame(frames[oldIndex] ?? frames[0]);
+    }
+
+    function useSource(canvas, context, label) {
+        const { width, height } = canvas;
+        const rgba = context.getImageData(0, 0, width, height).data;
+        source = { canvas, width, height, rgba };
+        grid = null;
+        selected = null;
+        tabStop = null;
+        frameButtons = [];
+        frameList.replaceChildren();
+        gridSummary.textContent = 'Apply a valid grid to inspect frames.';
+        downloadManifest.disabled = true;
+        renderSelectedFrame(null);
+        loadStatus.dataset.error = 'false';
+        loadStatus.textContent = `${label} · ${width} × ${height} px`;
+        applyGrid();
+    }
+
+    function loadDemo() {
+        loadVersion++;
+        fileInput.value = '';
+        const { canvas, context } = createSourceCanvas(64, 32);
+        const ink = { '#': '#233148', g: '#54B89D', G: '#B7EBB3', p: '#A389E9', P: '#E2D5FF', y: '#F0B75A', Y: '#FFE49A', b: '#5198CC', B: '#B5E1FF' };
+        const sprites = [
+            [0, ['...##...', '..#GG#..', '.#GGGg#.', '#GGGGgg#', '#GGgggg#', '.#gggg#.', '..####..']],
+            [1, ['..####..', '.#PPpp#.', '#PPPPPp#', '#P#PP#p#', '#PPPPPp#', '#PPpppp#', '.##..##.']],
+            [2, ['....##..', '...#YY#.', '..#YYYy#', '.#YYYy#.', '#YYyy#..', '.#Yy#...', '..##....']],
+            [4, ['.######.', '#BBBBBb#', '#B#BB#b#', '#BBBBbb#', '.#bbbb#.', '..#bb#..', '...##...']],
+            [5, ['...##...', '..#YY#..', '.#YYYY#.', '#YYYYyy#', '.#YYYY#.', '..#yy#..', '...##...']],
+            [6, ['...##...', '..#GG#..', '.#GGgg#.', '#GGgggg#', '...##...', '...##...', '..####..']],
+        ];
+        for (const [index, rows] of sprites) {
+            rows.forEach((row, y) => [...row].forEach((pixel, x) => {
+                if (pixel === '.') return;
+                context.fillStyle = ink[pixel];
+                context.fillRect((index % 4) * 16 + 4 + x, Math.floor(index / 4) * 16 + 4 + y, 1, 1);
+            }));
+        }
+        for (const [key, input] of settings) input.value = defaults[key];
+        useSource(canvas, context, 'Demo sprite sheet');
+    }
+
+    async function loadFile(file) {
+        const version = ++loadVersion;
+        loadStatus.dataset.error = 'false';
+        loadStatus.textContent = 'Reading PNG…';
+        let bitmap;
+        try {
+            if (file.size > byteLimit) throw new Error('Choose a PNG smaller than or equal to 32 MiB.');
+            const header = new Uint8Array(await file.slice(0, 33).arrayBuffer());
+            if (version !== loadVersion) return;
+            const { width, height } = inspectPngHeader(header);
+            try {
+                bitmap = await createImageBitmap(file);
+            } catch {
+                throw new Error('The browser could not decode this PNG.');
+            }
+            if (version !== loadVersion) return;
+            if (bitmap.width !== width || bitmap.height !== height) {
+                throw new Error('Decoded image dimensions do not match the PNG header.');
+            }
+            const { canvas, context } = createSourceCanvas(width, height);
+            context.drawImage(bitmap, 0, 0);
+            useSource(canvas, context, file.name);
+        } catch (error) {
+            if (version !== loadVersion) return;
+            loadStatus.dataset.error = 'true';
+            loadStatus.textContent = error.message;
+        } finally {
+            bitmap?.close();
+        }
+    }
+
+    function saveFile(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        fileInput.value = '';
+        if (file) void loadFile(file);
+    });
+    byId('loadDemo').addEventListener('click', loadDemo);
+    byId('applyGrid').addEventListener('click', applyGrid);
+
+    frameList.addEventListener('click', event => {
+        const button = event.target.closest('button[data-index]');
+        if (button) renderSelectedFrame(grid.frames[Number(button.dataset.index)]);
+    });
+    frameList.addEventListener('keydown', event => {
+        const button = event.target.closest('button[data-index]');
+        if (!button) return;
+        const { index, row, column } = grid.frames[Number(button.dataset.index)];
+        let next = index;
+        switch (event.key) {
+            case 'ArrowLeft': next -= column > 0 ? 1 : 0; break;
+            case 'ArrowRight': next += column < grid.columns - 1 ? 1 : 0; break;
+            case 'ArrowUp': next -= row > 0 ? grid.columns : 0; break;
+            case 'ArrowDown': next += row < grid.rows - 1 ? grid.columns : 0; break;
+            case 'Home': next -= column; break;
+            case 'End': next += grid.columns - 1 - column; break;
+            default: return;
+        }
+        event.preventDefault();
+        setTabStop(next);
+        tabStop.focus({ preventScroll: true });
+        tabStop.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    sheetCanvas.addEventListener('click', event => {
+        if (!grid) return;
+        const rect = sheetCanvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * source.width / rect.width;
+        const y = (event.clientY - rect.top) * source.height / rect.height;
+        const frame = grid.frames.find(cell => x >= cell.x && x < cell.x + cell.width &&
+            y >= cell.y && y < cell.y + cell.height);
+        if (frame) renderSelectedFrame(frame);
+    });
+
+    downloadFrame.addEventListener('click', () => {
+        if (!selected) return;
+        const frame = selected;
+        const crop = document.createElement('canvas');
+        crop.width = frame.width;
+        crop.height = frame.height;
+        crop.getContext('2d').drawImage(source.canvas, frame.x, frame.y, frame.width, frame.height,
+            0, 0, frame.width, frame.height);
+        crop.toBlob(blob => {
+            if (!blob) {
+                exportStatus.textContent = 'The browser could not export this frame.';
+                return;
+            }
+            saveFile(blob, `sprite-frame-${String(frame.index + 1).padStart(2, '0')}.png`);
+            exportStatus.textContent = `${frameLabel(frame)} exported as PNG.`;
+        }, 'image/png');
+    });
+    downloadManifest.addEventListener('click', () => {
+        if (!grid) return;
+        const { frames, ...layout } = grid;
+        const { width, height } = source;
+        const manifest = { image: { width, height }, grid: layout, frames };
+        const blob = new Blob([JSON.stringify(manifest, null, 2) + '\n'], { type: 'application/json' });
+        saveFile(blob, 'sprite-grid.json');
+        exportStatus.textContent = 'Grid exported as JSON.';
+    });
+
+    loadDemo();
+})();

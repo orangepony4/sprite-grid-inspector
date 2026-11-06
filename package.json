@@ -1,0 +1,13 @@
+{
+  "name": "sprite-grid-inspector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inspect PNG sprite sheets and export selected grid frames in your browser",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
