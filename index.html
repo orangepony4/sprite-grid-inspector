@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; base-uri 'none'; form-action 'none'">
-    <meta name="description" content="Inspect a PNG sprite sheet, lay out its frame grid, and export individual PNG frames or a JSON manifest.">
+    <meta name="description" content="Lay out a PNG sprite sheet, inspect frame bounds, and export PNG frames, a JSON manifest, or a ZIP.">
     <title>Sprite Grid Inspector</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%2314322d'/%3E%3Cpath fill='%23bcf2ce' d='M11 11h11v11H11zm15 0h11v11H26zM11 26h11v11H11z'/%3E%3Cpath fill='%2345ad89' d='M26 26h11v11H26z'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
@@ -13,40 +13,66 @@
     <script src="app.js" defer></script>
 </head>
 <body>
+<a class="skip-link" href="#sheetHeading">Skip to the sprite sheet</a>
 <div class="page">
     <header class="masthead">
         <p class="brand"><span class="brand-mark" aria-hidden="true"></span> Sprite Grid Inspector</p>
-        <p class="local-label">Runs in your browser</p>
+        <p class="local-label">Local processing</p>
     </header>
 
     <main>
         <div class="intro">
             <div>
-                <p class="kicker">PNG sprite sheets</p>
-                <h1>Inspect a sprite grid</h1>
+                <p class="kicker">PNG workspace</p>
+                <h1>Inspect a sprite sheet</h1>
             </div>
-            <p class="intro-copy">Set a frame size, check the grid over your sheet, and export a selected frame or its coordinates.</p>
+            <p class="intro-copy">Set the grid, check what fits in each cell, and export frames at their original size.</p>
         </div>
         <noscript><p class="notice">Enable JavaScript to inspect and export sprite frames.</p></noscript>
 
-        <section class="panel" aria-labelledby="sheetHeading">
-            <div class="section-heading">
-                <div>
-                    <p class="kicker">01 · Source</p>
-                    <h2 id="sheetHeading">Sprite sheet</h2>
-                </div>
-                <button class="button secondary" type="button" id="loadDemo">Load demo sheet</button>
-            </div>
-            <div class="upload">
-                <label for="fileInput">PNG file</label>
-                <input type="file" id="fileInput" accept="image/png,.png">
+        <div class="source-bar">
+            <div class="source-meta">
+                <p class="kicker">Source PNG</p>
                 <p class="status" id="loadStatus" role="status"></p>
             </div>
+            <div class="file-picker">
+                <input type="file" id="fileInput" class="sr-only" accept="image/png,.png">
+                <label for="fileInput" class="button secondary">Choose PNG</label>
+            </div>
+            <button class="button secondary" type="button" id="loadDemo">Load demo sheet</button>
+        </div>
 
-            <div class="workspace">
-                <div class="grid-settings">
-                    <h3>Grid settings</h3>
-                    <p class="help" id="gridHelp">Use whole pixels. Offset starts at the top-left corner.</p>
+        <div class="workspace">
+            <section class="panel sheet-preview" aria-labelledby="sheetHeading">
+                <header class="section-heading">
+                    <div>
+                        <p class="kicker">01 / Preview</p>
+                        <h2 id="sheetHeading" tabindex="-1">Sprite sheet</h2>
+                    </div>
+                    <span class="panel-note">Transparency preview</span>
+                </header>
+                <div class="sheet-viewport" role="region" aria-label="Scrollable sprite sheet preview" tabindex="0">
+                    <canvas id="sheetCanvas" width="1" height="1" role="img" aria-label="Sprite sheet with its frame grid"></canvas>
+                </div>
+                <div class="sheet-caption">
+                    <p class="help">Select a cell to inspect its visible pixels.</p>
+                    <ul class="grid-key" aria-label="Grid legend">
+                        <li><span class="key-mark key-selected" aria-hidden="true"></span>Selected</li>
+                        <li><span class="key-mark" aria-hidden="true"></span>Occupied</li>
+                        <li><span class="key-mark key-empty" aria-hidden="true"></span>Empty</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="panel grid-settings" aria-labelledby="settingsHeading">
+                <header class="section-heading">
+                    <div>
+                        <p class="kicker">02 / Configure</p>
+                        <h2 id="settingsHeading">Grid settings</h2>
+                    </div>
+                    <span class="panel-note">px</span>
+                </header>
+                <div class="grid-fields">
                     <fieldset>
                         <legend>Cell size</legend>
                         <div class="field-row">
@@ -86,57 +112,51 @@
                             </div>
                         </div>
                     </fieldset>
+                </div>
+                <div class="grid-apply">
                     <button class="button primary" type="button" id="applyGrid" aria-describedby="gridHelp gridError">Apply grid</button>
+                    <p class="help" id="gridHelp">Offsets start at the top-left pixel.</p>
                     <p class="status error" id="gridError" role="status"></p>
                 </div>
+            </section>
 
-                <div class="sheet-preview">
-                    <div class="preview-heading">
-                        <h3>Sheet preview</h3>
-                        <span class="chip">Pixel preview</span>
+            <section class="panel frame-index" aria-labelledby="framesHeading">
+                <header class="section-heading">
+                    <div>
+                        <p class="kicker">03 / Inspect</p>
+                        <h2 id="framesHeading">Frame inspector</h2>
                     </div>
-                    <div class="sheet-viewport" role="region" aria-label="Scrollable sprite sheet preview" tabindex="0">
-                        <canvas id="sheetCanvas" width="1" height="1" role="img" aria-label="Sprite sheet with its frame grid"></canvas>
-                    </div>
-                    <p class="help">Select a cell in the sheet or use the frame list below. Scroll the preview to inspect larger sheets.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="panel results" aria-labelledby="framesHeading">
-            <div class="section-heading">
-                <div>
-                    <p class="kicker">02 · Frames</p>
-                    <h2 id="framesHeading">Frame inspector</h2>
                     <p id="gridSummary" class="status summary" role="status"></p>
-                </div>
+                </header>
+                <h3 id="frameListHeading" class="sr-only">Frame list</h3>
+                <div class="frame-list" id="frameList" role="group" aria-labelledby="frameListHeading" aria-describedby="frameListHelp"></div>
+                <p class="help" id="frameListHelp">Arrow keys follow the grid. Enter or Space selects a frame.</p>
                 <div class="export-actions">
                     <button class="button secondary" type="button" id="downloadManifest" disabled>Download JSON manifest</button>
                     <button class="button primary" type="button" id="downloadBatch" disabled>Download occupied frames</button>
                 </div>
-            </div>
-            <div class="frame-layout">
-                <div>
-                    <h3 id="frameListHeading">Frame list</h3>
-                    <p class="help" id="frameListHelp">Scroll to see more frames. Arrow keys follow the sheet’s rows and columns. Enter or Space selects the focused frame.</p>
-                    <div class="frame-list" id="frameList" role="group" aria-labelledby="frameListHeading" aria-describedby="frameListHelp"></div>
-                </div>
-                <div class="selected-frame">
-                    <h3>Selected frame</h3>
-                    <div class="frame-viewport">
-                        <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Selected sprite frame preview"></canvas>
+                <p class="status" id="exportStatus" role="status"></p>
+            </section>
+
+            <section class="panel selected-frame" aria-labelledby="selectedHeading">
+                <header class="section-heading">
+                    <div>
+                        <p class="kicker">Frame detail</p>
+                        <h2 id="selectedHeading">Selected frame</h2>
                     </div>
-                    <p class="status details" id="frameDetails" role="status"></p>
-                    <button class="button primary" type="button" id="downloadFrame" disabled>Download frame PNG</button>
+                </header>
+                <div class="frame-viewport">
+                    <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Selected sprite frame preview"></canvas>
                 </div>
-            </div>
-            <p class="status" id="exportStatus" role="status"></p>
-        </section>
+                <p class="status details" id="frameDetails" role="status"></p>
+                <button class="button secondary" type="button" id="downloadFrame" disabled>Download frame PNG</button>
+            </section>
+        </div>
     </main>
 
     <footer class="footer">
-        <p>Sprite Grid Inspector</p>
-        <p>PNG sheets · PNG frames · JSON coordinates</p>
+        <p>Files stay in your browser.</p>
+        <p>PNG frames · JSON coordinates · ZIP batch</p>
     </footer>
 </div>
 </body>
