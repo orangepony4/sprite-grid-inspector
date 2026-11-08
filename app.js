@@ -321,6 +321,7 @@
         if (button) renderSelectedFrame(grid.frames[Number(button.dataset.index)]);
     });
     frameList.addEventListener('keydown', event => {
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
         const button = event.target.closest('button[data-index]');
         if (!button) return;
         const { index, row, column } = grid.frames[Number(button.dataset.index)];
