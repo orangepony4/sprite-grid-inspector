@@ -8,7 +8,7 @@ Check how a PNG sprite sheet splits into frames before using it in a game. The b
 
 1. [Open Sprite Grid Inspector](https://orangepony4.github.io/sprite-grid-inspector/) or extract the offline ZIP from the [latest release](https://github.com/orangepony4/sprite-grid-inspector/releases/latest) and open `index.html`. Try the demo or choose a PNG file.
 2. Set the cell width and height in pixels. Offsets move the start from the left and top edges, and gaps add space between cells.
-3. Apply the grid and choose a frame in the sheet or in the keyboard-accessible list.
+3. Apply the grid and choose a frame in the sheet or in the keyboard-accessible list. Both panels scroll to keep the chosen frame in view.
 4. Download the selected cell as PNG, export the grid as JSON, or download all occupied cells and the manifest together as ZIP.
 
 ![Sprite Grid Inspector showing the 64 × 32 demo sheet, grid controls, two empty cells, and a preview of the selected frame](docs/preview.webp)

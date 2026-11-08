@@ -9,6 +9,7 @@
     const gridError = byId('gridError');
     const gridSummary = byId('gridSummary');
     const sheetCanvas = byId('sheetCanvas');
+    const sheetViewport = sheetCanvas.parentElement;
     const frameCanvas = byId('frameCanvas');
     const frameList = byId('frameList');
     const frameDetails = byId('frameDetails');
@@ -89,6 +90,40 @@
         return `sprite-frame-${frameNumber(frame)}.png`;
     }
 
+    function nearestScroll(start, end, visibleStart, visibleEnd) {
+        const before = start < visibleStart;
+        const after = end > visibleEnd;
+        if (before === after) return 0;
+        if (end - start > visibleEnd - visibleStart) {
+            return before ? end - visibleEnd : start - visibleStart;
+        }
+        return before ? start - visibleStart : end - visibleEnd;
+    }
+
+    function revealIn(viewport, bounds) {
+        const rect = viewport.getBoundingClientRect();
+        const left = rect.left + viewport.clientLeft;
+        const top = rect.top + viewport.clientTop;
+        const margin = 3;
+        viewport.scrollBy({
+            left: nearestScroll(bounds.left - margin, bounds.right + margin, left, left + viewport.clientWidth),
+            top: nearestScroll(bounds.top - margin, bounds.bottom + margin, top, top + viewport.clientHeight),
+        });
+    }
+
+    function revealSelection(frame) {
+        const rect = sheetCanvas.getBoundingClientRect();
+        const scaleX = rect.width / source.width;
+        const scaleY = rect.height / source.height;
+        revealIn(sheetViewport, {
+            left: rect.left + frame.x * scaleX,
+            right: rect.left + (frame.x + frame.width) * scaleX,
+            top: rect.top + frame.y * scaleY,
+            bottom: rect.top + (frame.y + frame.height) * scaleY,
+        });
+        revealIn(frameList, tabStop.getBoundingClientRect());
+    }
+
     function renderSelectedFrame(frame) {
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
@@ -114,6 +149,7 @@
             : 'Empty frame. Every pixel is transparent.';
         frameDetails.textContent = `${frameLabel(frame)} · ${frame.width} × ${frame.height} px at (${frame.x}, ${frame.y}). ${content}`;
         renderSheet();
+        revealSelection(frame);
     }
 
     function renderFrameList() {
