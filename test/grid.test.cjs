@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
-const { inspectPngHeader, findPngExif, makeGrid, inspectFrames } = require('../grid.js');
+const { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames } = require('../grid.js');
 
 function pngHeader(width, height) {
     const bytes = Buffer.alloc(33);
@@ -49,32 +49,51 @@ function pngChunk(type, data = Buffer.alloc(0)) {
     return chunk;
 }
 
-test('finds only the complete EXIF chunk, including its CRC, without changing pixel bytes', () => {
+test('finds only complete metadata chunks, including their CRCs, without changing pixel bytes', () => {
     const header = pngHeader(32, 16);
-    const pixelData = pngChunk('IDAT', Buffer.from('eXIf inside compressed data'));
-    const metadata = pngChunk('eXIf', Buffer.from('orientation metadata'));
+    const pixelData = pngChunk('IDAT', Buffer.from('eXIf and acTL inside compressed data'));
+    const exif = pngChunk('eXIf', Buffer.from('orientation metadata'));
+    const animation = pngChunk('acTL', Buffer.from('0000000200000000', 'hex'));
     const end = pngChunk('IEND');
     const plain = Buffer.concat([header, pixelData, end]);
-    assert.equal(findPngExif(Uint8Array.from(plain).buffer), null);
+    const find = bytes => findPngDecodeOmissions(Uint8Array.from(bytes).buffer);
+    assert.deepEqual(find(plain), []);
 
-    for (const [before, after] of [[header, Buffer.concat([pixelData, end])],
-        [Buffer.concat([header, pixelData]), end]]) {
-        const oriented = Buffer.concat([before, metadata, after]);
-        const range = findPngExif(Uint8Array.from(oriented).buffer);
-        assert.deepEqual(range, { start: before.length, end: before.length + metadata.length });
-        assert.deepEqual(Buffer.concat([oriented.subarray(0, range.start), oriented.subarray(range.end)]), plain);
-    }
+    const afterPixels = Buffer.concat([header, pixelData]);
+    assert.deepEqual(find(Buffer.concat([afterPixels, exif, end])), [
+        { start: afterPixels.length, end: afterPixels.length + exif.length },
+    ]);
+    assert.deepEqual(find(Buffer.concat([header, animation, pixelData, end])), [
+        { start: header.length, end: header.length + animation.length },
+    ]);
+
+    const animationFrame = Buffer.concat([pngChunk('fcTL', Buffer.alloc(26)), pngChunk('fdAT', Buffer.alloc(9))]);
+    const animated = Buffer.concat([header, animation, pixelData, exif, animationFrame, end]);
+    const animationEnd = header.length + animation.length;
+    const exifStart = animationEnd + pixelData.length;
+    const ranges = find(animated);
+    assert.deepEqual(ranges, [
+        { start: header.length, end: animationEnd },
+        { start: exifStart, end: exifStart + exif.length },
+    ]);
+    const [first, second] = ranges;
+    assert.deepEqual(Buffer.concat([
+        animated.subarray(0, first.start), animated.subarray(first.end, second.start), animated.subarray(second.end),
+    ]), Buffer.concat([header, pixelData, animationFrame, end]));
 });
 
-test('rejects EXIF metadata with incomplete bounds or duplicate chunks', () => {
+test('rejects PNG metadata with incomplete bounds or duplicate chunks', () => {
     const header = pngHeader(32, 16);
     const exif = pngChunk('eXIf', Buffer.alloc(12));
+    const animation = pngChunk('acTL', Buffer.alloc(8));
     const iend = pngChunk('IEND');
-    const find = (...parts) => findPngExif(Uint8Array.from(Buffer.concat(parts)).buffer);
+    const find = (...parts) => findPngDecodeOmissions(Uint8Array.from(Buffer.concat(parts)).buffer);
     assert.throws(() => find(header, exif.subarray(0, 10)), /incomplete/);
     assert.throws(() => find(header, exif.subarray(0, -1)), /extends past/);
+    assert.throws(() => find(header, animation.subarray(0, -1)), /extends past/);
     assert.throws(() => find(header, exif), /missing IEND/);
     assert.throws(() => find(header, exif, exif, iend), /more than one EXIF/);
+    assert.throws(() => find(header, animation, animation, iend), /more than one animation control/);
 });
 
 test('enumerates complete cells top-to-bottom and left-to-right with offsets and gaps', () => {
@@ -143,6 +162,6 @@ test('exposes the same API as a classic browser script', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'grid.js'), 'utf8');
     const sandbox = vm.createContext({});
     vm.runInContext(source, sandbox);
-    assert.deepEqual(Object.keys(sandbox.SpriteGrid), ['inspectPngHeader', 'findPngExif', 'makeGrid', 'inspectFrames']);
+    assert.deepEqual(Object.keys(sandbox.SpriteGrid), ['inspectPngHeader', 'findPngDecodeOmissions', 'makeGrid', 'inspectFrames']);
     assert.equal(sandbox.SpriteGrid.inspectPngHeader(pngHeader(9, 6)).width, 9);
 });

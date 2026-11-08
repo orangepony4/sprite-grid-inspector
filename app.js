@@ -1,7 +1,7 @@
 (() => {
     'use strict';
 
-    const { inspectPngHeader, findPngExif, makeGrid, inspectFrames } = globalThis.SpriteGrid;
+    const { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames } = globalThis.SpriteGrid;
     const { buildStoredZip } = globalThis.SpriteZip;
     const byId = id => document.getElementById(id);
     const fileInput = byId('fileInput');
@@ -251,9 +251,19 @@
             const { width, height } = inspectPngHeader(header);
             const buffer = await file.arrayBuffer();
             if (version !== loadVersion) return;
-            const exif = findPngExif(buffer);
-            // Decode stored sprite coordinates regardless of camera orientation metadata.
-            const png = exif ? new Blob([file.slice(0, exif.start), file.slice(exif.end)], { type: 'image/png' }) : file;
+            const omissions = findPngDecodeOmissions(buffer);
+            let png = file;
+            if (omissions.length) {
+                // Without eXIf or acTL, the decoder uses the stored still image and its coordinates.
+                const chunks = [];
+                let offset = 0;
+                for (const { start, end } of omissions) {
+                    chunks.push(file.slice(offset, start));
+                    offset = end;
+                }
+                chunks.push(file.slice(offset));
+                png = new Blob(chunks, { type: 'image/png' });
+            }
             try {
                 bitmap = await createImageBitmap(png);
             } catch {

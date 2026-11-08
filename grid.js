@@ -4,6 +4,10 @@
     const maxEdge = 4096;
     const maxPixels = 16777216;
     const maxFrames = 512;
+    const pngDecodeOmissions = new Map([
+        [0x65584966, 'EXIF'], // eXIf
+        [0x6163544c, 'animation control'], // acTL
+    ]);
 
     function validateDimensions(width, height) {
         if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) {
@@ -38,9 +42,9 @@
         return { width, height };
     }
 
-    function findPngExif(buffer) {
+    function findPngDecodeOmissions(buffer) {
         const view = new DataView(buffer);
-        let exif = null;
+        const ranges = new Map();
         // The caller has already checked the signature and complete IHDR chunk.
         for (let start = 33; start < view.byteLength;) {
             if (view.byteLength - start < 12) throw new Error('Invalid PNG: incomplete chunk header or CRC.');
@@ -48,10 +52,11 @@
             const type = view.getUint32(start + 4);
             const end = start + 12 + length;
             if (end > view.byteLength) throw new Error('Invalid PNG: chunk extends past the end of the file.');
-            if (type === 0x49454e44) return exif; // IEND
-            if (type === 0x65584966) { // eXIf
-                if (exif) throw new Error('Invalid PNG: more than one EXIF chunk.');
-                exif = { start, end };
+            if (type === 0x49454e44) return [...ranges.values()]; // IEND
+            const label = pngDecodeOmissions.get(type);
+            if (label) {
+                if (ranges.has(type)) throw new Error(`Invalid PNG: more than one ${label} chunk.`);
+                ranges.set(type, { start, end });
             }
             start = end;
         }
@@ -147,7 +152,7 @@
         });
     }
 
-    const api = { inspectPngHeader, findPngExif, makeGrid, inspectFrames };
+    const api = { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames };
     if (typeof module === 'object' && module.exports) {
         module.exports = api;
     } else {
