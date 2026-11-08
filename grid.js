@@ -38,6 +38,26 @@
         return { width, height };
     }
 
+    function findPngExif(buffer) {
+        const view = new DataView(buffer);
+        let exif = null;
+        // The caller has already checked the signature and complete IHDR chunk.
+        for (let start = 33; start < view.byteLength;) {
+            if (view.byteLength - start < 12) throw new Error('Invalid PNG: incomplete chunk header or CRC.');
+            const length = view.getUint32(start);
+            const type = view.getUint32(start + 4);
+            const end = start + 12 + length;
+            if (end > view.byteLength) throw new Error('Invalid PNG: chunk extends past the end of the file.');
+            if (type === 0x49454e44) return exif; // IEND
+            if (type === 0x65584966) { // eXIf
+                if (exif) throw new Error('Invalid PNG: more than one EXIF chunk.');
+                exif = { start, end };
+            }
+            start = end;
+        }
+        throw new Error('Invalid PNG: missing IEND chunk.');
+    }
+
     function validateGridOption(value, label, minimum) {
         if (!Number.isSafeInteger(value) || value < minimum || value > maxEdge) {
             throw new Error(`${label} must be an integer from ${minimum} to ${maxEdge}.`);
@@ -127,7 +147,7 @@
         });
     }
 
-    const api = { inspectPngHeader, makeGrid, inspectFrames };
+    const api = { inspectPngHeader, findPngExif, makeGrid, inspectFrames };
     if (typeof module === 'object' && module.exports) {
         module.exports = api;
     } else {

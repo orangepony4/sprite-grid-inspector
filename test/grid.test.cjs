@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
-const { inspectPngHeader, makeGrid, inspectFrames } = require('../grid.js');
+const { inspectPngHeader, findPngExif, makeGrid, inspectFrames } = require('../grid.js');
 
 function pngHeader(width, height) {
     const bytes = Buffer.alloc(33);
@@ -39,6 +39,42 @@ test('rejects truncated, malformed, zero-sized, and oversized PNG headers', () =
     assert.throws(() => inspectPngHeader(pngHeader(0, 1)), /positive/);
     assert.throws(() => inspectPngHeader(pngHeader(4097, 1)), /4096/);
     assert.throws(() => inspectPngHeader(pngHeader(1, 0xffffffff)), /4096/);
+});
+
+function pngChunk(type, data = Buffer.alloc(0)) {
+    const chunk = Buffer.alloc(12 + data.length);
+    chunk.writeUInt32BE(data.length, 0);
+    chunk.write(type, 4, 'ascii');
+    data.copy(chunk, 8);
+    return chunk;
+}
+
+test('finds only the complete EXIF chunk, including its CRC, without changing pixel bytes', () => {
+    const header = pngHeader(32, 16);
+    const pixelData = pngChunk('IDAT', Buffer.from('eXIf inside compressed data'));
+    const metadata = pngChunk('eXIf', Buffer.from('orientation metadata'));
+    const end = pngChunk('IEND');
+    const plain = Buffer.concat([header, pixelData, end]);
+    assert.equal(findPngExif(Uint8Array.from(plain).buffer), null);
+
+    for (const [before, after] of [[header, Buffer.concat([pixelData, end])],
+        [Buffer.concat([header, pixelData]), end]]) {
+        const oriented = Buffer.concat([before, metadata, after]);
+        const range = findPngExif(Uint8Array.from(oriented).buffer);
+        assert.deepEqual(range, { start: before.length, end: before.length + metadata.length });
+        assert.deepEqual(Buffer.concat([oriented.subarray(0, range.start), oriented.subarray(range.end)]), plain);
+    }
+});
+
+test('rejects EXIF metadata with incomplete bounds or duplicate chunks', () => {
+    const header = pngHeader(32, 16);
+    const exif = pngChunk('eXIf', Buffer.alloc(12));
+    const iend = pngChunk('IEND');
+    const find = (...parts) => findPngExif(Uint8Array.from(Buffer.concat(parts)).buffer);
+    assert.throws(() => find(header, exif.subarray(0, 10)), /incomplete/);
+    assert.throws(() => find(header, exif.subarray(0, -1)), /extends past/);
+    assert.throws(() => find(header, exif), /missing IEND/);
+    assert.throws(() => find(header, exif, exif, iend), /more than one EXIF/);
 });
 
 test('enumerates complete cells top-to-bottom and left-to-right with offsets and gaps', () => {
@@ -107,6 +143,6 @@ test('exposes the same API as a classic browser script', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'grid.js'), 'utf8');
     const sandbox = vm.createContext({});
     vm.runInContext(source, sandbox);
-    assert.deepEqual(Object.keys(sandbox.SpriteGrid), ['inspectPngHeader', 'makeGrid', 'inspectFrames']);
+    assert.deepEqual(Object.keys(sandbox.SpriteGrid), ['inspectPngHeader', 'findPngExif', 'makeGrid', 'inspectFrames']);
     assert.equal(sandbox.SpriteGrid.inspectPngHeader(pngHeader(9, 6)).width, 9);
 });

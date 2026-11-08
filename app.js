@@ -1,7 +1,7 @@
 (() => {
     'use strict';
 
-    const { inspectPngHeader, makeGrid, inspectFrames } = globalThis.SpriteGrid;
+    const { inspectPngHeader, findPngExif, makeGrid, inspectFrames } = globalThis.SpriteGrid;
     const { buildStoredZip } = globalThis.SpriteZip;
     const byId = id => document.getElementById(id);
     const fileInput = byId('fileInput');
@@ -249,8 +249,13 @@
             const header = new Uint8Array(await file.slice(0, 33).arrayBuffer());
             if (version !== loadVersion) return;
             const { width, height } = inspectPngHeader(header);
+            const buffer = await file.arrayBuffer();
+            if (version !== loadVersion) return;
+            const exif = findPngExif(buffer);
+            // Decode stored sprite coordinates regardless of camera orientation metadata.
+            const png = exif ? new Blob([file.slice(0, exif.start), file.slice(exif.end)], { type: 'image/png' }) : file;
             try {
-                bitmap = await createImageBitmap(file);
+                bitmap = await createImageBitmap(png);
             } catch {
                 throw new Error('The browser could not decode this PNG.');
             }

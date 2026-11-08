@@ -21,7 +21,7 @@ The ZIP skips empty cells and uses their original one-based frame numbers in the
 
 ## Limits
 
-The browser accepts PNG files up to 32 MiB and 4096 × 4096 pixels. A grid can contain up to 512 full cells. Animated PNGs use their default still image.
+The browser accepts PNG files up to 32 MiB and 4096 × 4096 pixels. A grid can contain up to 512 full cells. Animated PNGs use their default still image. Frame positions follow the PNG's stored pixel orientation, regardless of EXIF rotation metadata.
 
 ## Development
 
