@@ -324,7 +324,10 @@
         if (file) void loadFile(file);
     });
     byId('loadDemo').addEventListener('click', loadDemo);
-    byId('applyGrid').addEventListener('click', applyGrid);
+    byId('gridForm').addEventListener('submit', event => {
+        event.preventDefault();
+        applyGrid();
+    });
 
     frameList.addEventListener('click', event => {
         const button = event.target.closest('button[data-index]');

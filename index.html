@@ -72,7 +72,7 @@
                     </div>
                     <span class="panel-note">px</span>
                 </header>
-                <div class="grid-fields">
+                <form class="grid-fields" id="gridForm" novalidate>
                     <fieldset>
                         <legend>Cell size</legend>
                         <div class="field-row">
@@ -112,9 +112,9 @@
                             </div>
                         </div>
                     </fieldset>
-                </div>
+                </form>
                 <div class="grid-apply">
-                    <button class="button primary" type="button" id="applyGrid" aria-describedby="gridHelp gridError">Apply grid</button>
+                    <button class="button primary" type="submit" form="gridForm" id="applyGrid" aria-describedby="gridHelp gridError">Apply grid</button>
                     <p class="help" id="gridHelp">Offsets start at the top-left pixel.</p>
                     <p class="status error" id="gridError" role="status"></p>
                 </div>
