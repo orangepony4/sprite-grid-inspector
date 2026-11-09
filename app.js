@@ -14,6 +14,7 @@
     const frameList = byId('frameList');
     const frameDetails = byId('frameDetails');
     const downloadFrame = byId('downloadFrame');
+    const frameExportStatus = byId('frameExportStatus');
     const downloadManifest = byId('downloadManifest');
     const downloadBatch = byId('downloadBatch');
     const exportStatus = byId('exportStatus');
@@ -28,6 +29,7 @@
     let tabStop;
     let loadVersion = 0;
     let batchPending = false;
+    let pendingFrame;
 
     function createSourceCanvas(width, height) {
         const canvas = document.createElement('canvas');
@@ -160,7 +162,7 @@
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
         if (!batchPending) exportStatus.textContent = '';
-        downloadFrame.disabled = !frame;
+        refreshFrameExport();
         frameCanvas.hidden = !frame;
         if (!frame) {
             frameCanvas.width = 1;
@@ -326,11 +328,22 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    function refreshBatchButton() {
+    function setExportButtonState(button, available, pending) {
         // A pending export keeps its keyboard focus while blocking repeat activation.
-        downloadBatch.disabled = !batchPending && !grid?.frames.some(frame => !frame.empty);
-        if (batchPending) downloadBatch.setAttribute('aria-disabled', 'true');
-        else downloadBatch.removeAttribute('aria-disabled');
+        button.disabled = !pending && !available;
+        if (pending) button.setAttribute('aria-disabled', 'true');
+        else button.removeAttribute('aria-disabled');
+    }
+
+    function refreshFrameExport() {
+        setExportButtonState(downloadFrame, selected, pendingFrame);
+        frameExportStatus.textContent = pendingFrame && pendingFrame === selected
+            ? `Preparing ${frameLabel(pendingFrame)} PNG…`
+            : '';
+    }
+
+    function refreshBatchButton() {
+        setExportButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), batchPending);
     }
 
     function manifestContent(image, currentGrid) {
@@ -397,14 +410,21 @@
     });
 
     downloadFrame.addEventListener('click', async () => {
-        if (!selected) return;
+        if (!selected || pendingFrame) return;
         const frame = selected;
+        pendingFrame = frame;
+        refreshFrameExport();
+        let message;
         try {
             const blob = await frameBlob(source.canvas, frame);
             saveFile(blob, frameFilename(frame));
-            exportStatus.textContent = `${frameLabel(frame)} exported as PNG.`;
+            message = `${frameLabel(frame)} exported as PNG.`;
         } catch (error) {
-            exportStatus.textContent = error.message;
+            message = error.message;
+        } finally {
+            pendingFrame = undefined;
+            setExportButtonState(downloadFrame, selected, false);
+            if (selected === frame) frameExportStatus.textContent = message;
         }
     });
     downloadManifest.addEventListener('click', () => {

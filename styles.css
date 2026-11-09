@@ -191,7 +191,7 @@ h2 { font-size: clamp(1.55rem, 2.45vw, 2rem); line-height: 1.14; }
 .primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 .primary:hover:not(:disabled, [aria-disabled="true"]) { border-color: var(--accent-dark); background: var(--accent-dark); }
 .secondary { background: var(--surface); color: var(--accent); }
-.secondary:hover:not(:disabled) { background: var(--tint); }
+.secondary:hover:not(:disabled, [aria-disabled="true"]) { background: var(--tint); }
 
 .file-picker label {
     display: flex;
@@ -334,7 +334,7 @@ canvas[hidden] { display: none; }
     padding-top: .85rem;
 }
 
-#exportStatus:not(:empty) { margin-top: .5rem; }
+#exportStatus:not(:empty), #frameExportStatus:not(:empty) { margin-top: .5rem; }
 .details { margin-top: .58rem; }
 #downloadFrame { margin-top: .65rem; }
 
