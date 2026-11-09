@@ -27,7 +27,8 @@ body {
 h1, h2, h3, p, fieldset, ul { margin: 0; }
 button, input { font: inherit; }
 button { cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: .55; }
+button:is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; }
+button:disabled, button[aria-disabled="true"]:not(:focus-visible) { opacity: .55; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .page {
@@ -188,7 +189,7 @@ h2 { font-size: clamp(1.55rem, 2.45vw, 2rem); line-height: 1.14; }
 }
 
 .primary { border-color: var(--accent); background: var(--accent); color: #fff; }
-.primary:hover:not(:disabled) { border-color: var(--accent-dark); background: var(--accent-dark); }
+.primary:hover:not(:disabled, [aria-disabled="true"]) { border-color: var(--accent-dark); background: var(--accent-dark); }
 .secondary { background: var(--surface); color: var(--accent); }
 .secondary:hover:not(:disabled) { background: var(--tint); }
 

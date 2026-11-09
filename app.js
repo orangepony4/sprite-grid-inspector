@@ -327,7 +327,10 @@
     }
 
     function refreshBatchButton() {
-        downloadBatch.disabled = batchPending || !grid?.frames.some(frame => !frame.empty);
+        // A pending export keeps its keyboard focus while blocking repeat activation.
+        downloadBatch.disabled = !batchPending && !grid?.frames.some(frame => !frame.empty);
+        if (batchPending) downloadBatch.setAttribute('aria-disabled', 'true');
+        else downloadBatch.removeAttribute('aria-disabled');
     }
 
     function manifestContent(image, currentGrid) {
@@ -411,7 +414,7 @@
         exportStatus.textContent = 'Grid exported as JSON.';
     });
     downloadBatch.addEventListener('click', async () => {
-        if (downloadBatch.disabled) return;
+        if (batchPending || downloadBatch.disabled) return;
         const canvas = source.canvas;
         const frames = grid.frames.filter(frame => !frame.empty);
         const manifest = new TextEncoder().encode(manifestContent(source, grid));
