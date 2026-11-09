@@ -124,6 +124,38 @@
         revealIn(frameList, tabStop.getBoundingClientRect());
     }
 
+    function drawFramePreview(area) {
+        const context = displayContext(frameCanvas, area.width, area.height, 192, 192);
+        context.drawImage(source.canvas, area.x, area.y, area.width, area.height,
+            0, 0, frameCanvas.width, frameCanvas.height);
+        return context;
+    }
+
+    function isBlankDownscale(context, area) {
+        const { width, height } = frameCanvas;
+        if (width >= area.width && height >= area.height) return false;
+        const { data } = context.getImageData(0, 0, width, height);
+        for (let alpha = 3; alpha < data.length; alpha += 4) {
+            if (data[alpha] !== 0) return false;
+        }
+        return true;
+    }
+
+    function renderFramePreview(frame) {
+        const fullPreview = drawFramePreview(frame);
+        const { bounds } = frame;
+        if (!bounds || !isBlankDownscale(fullPreview, frame)) return '';
+        if (!isBlankDownscale(drawFramePreview(bounds), bounds)) return ' Preview zoomed to visible pixels.';
+
+        // Widely scattered pixels can disappear even after fitting their bounds.
+        // The top row of the measured bounds contains at least one visible pixel.
+        const { y } = bounds;
+        let { x } = bounds;
+        while (source.rgba[(y * source.width + x) * 4 + 3] === 0) x++;
+        drawFramePreview({ x, y, width: 1, height: 1 });
+        return ' Preview zoomed to one visible pixel.';
+    }
+
     function renderSelectedFrame(frame) {
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
@@ -140,14 +172,12 @@
 
         setTabStop(frame.index);
         tabStop.setAttribute('aria-pressed', 'true');
-        const context = displayContext(frameCanvas, frame.width, frame.height, 192, 192);
-        context.drawImage(source.canvas, frame.x, frame.y, frame.width, frame.height,
-            0, 0, frameCanvas.width, frameCanvas.height);
+        const previewNote = renderFramePreview(frame);
         const bounds = frame.bounds;
         const content = bounds
             ? `Visible bounds ${bounds.width} × ${bounds.height} px at (${bounds.x}, ${bounds.y}).`
             : 'Empty frame. Every pixel is transparent.';
-        frameDetails.textContent = `${frameLabel(frame)} · ${frame.width} × ${frame.height} px at (${frame.x}, ${frame.y}). ${content}`;
+        frameDetails.textContent = `${frameLabel(frame)} · ${frame.width} × ${frame.height} px at (${frame.x}, ${frame.y}). ${content}${previewNote}`;
         renderSheet();
         revealSelection(frame);
     }
