@@ -80,6 +80,17 @@
         tabStop.tabIndex = 0;
     }
 
+    function focusedFrameIndex() {
+        const button = document.activeElement?.closest('button[data-index]');
+        return button && frameList.contains(button) ? Number(button.dataset.index) : null;
+    }
+
+    function focusFrame(index) {
+        setTabStop(index);
+        tabStop.focus({ preventScroll: true });
+        tabStop.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
     function frameLabel(frame) {
         return `Frame ${frameNumber(frame)}`;
     }
@@ -205,7 +216,7 @@
         tabStop = null;
     }
 
-    function applyGrid() {
+    function applyGrid(focusedIndex = focusedFrameIndex()) {
         const options = Object.fromEntries(settings.map(([key, input]) => [key, input.valueAsNumber]));
         let layout;
         let frames;
@@ -214,6 +225,7 @@
             frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
         } catch (error) {
             gridError.textContent = grid ? `${error.message} The previous grid is still shown.` : error.message;
+            if (!grid && focusedIndex !== null) byId('applyGrid').focus();
             return;
         }
 
@@ -227,9 +239,11 @@
         refreshBatchButton();
         renderFrameList();
         renderSelectedFrame(frames[oldIndex] ?? frames[0]);
+        if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
     }
 
     function useSource(canvas, context, label) {
+        const focusedIndex = focusedFrameIndex();
         const { width, height } = canvas;
         const rgba = context.getImageData(0, 0, width, height).data;
         source = { canvas, width, height, rgba };
@@ -244,7 +258,7 @@
         renderSelectedFrame(null);
         loadStatus.dataset.error = 'false';
         loadStatus.textContent = `${label} · ${width} × ${height} px`;
-        applyGrid();
+        applyGrid(focusedIndex);
     }
 
     function loadDemo() {
@@ -395,9 +409,7 @@
             default: return;
         }
         event.preventDefault();
-        setTabStop(next);
-        tabStop.focus({ preventScroll: true });
-        tabStop.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        focusFrame(next);
     });
     sheetCanvas.addEventListener('click', event => {
         if (!grid) return;
