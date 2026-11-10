@@ -76,10 +76,12 @@
         throw gridError('Invalid PNG: missing IEND chunk.', 'В PNG отсутствует завершающий блок IEND.');
     }
 
-    function validateGridOption(value, label, labelRu, minimum) {
+    function validateGridOption(value, field, label, labelRu, minimum) {
         if (!Number.isSafeInteger(value) || value < minimum || value > maxEdge) {
-            throw gridError(`${label} must be an integer from ${minimum} to ${maxEdge}.`,
+            const error = gridError(`${label} must be an integer from ${minimum} to ${maxEdge}.`,
                 `Введите целое число от ${minimum} до ${maxEdge} для поля «${labelRu}».`);
+            error.gridField = field;
+            throw error;
         }
     }
 
@@ -87,12 +89,12 @@
         validateDimensions(width, height);
         if (!options || typeof options !== 'object') throw gridError('Expected grid options.', 'Укажите настройки сетки.');
         const { cellWidth, cellHeight, offsetX = 0, offsetY = 0, gapX = 0, gapY = 0 } = options;
-        validateGridOption(cellWidth, 'Cell width', 'Ширина', 1);
-        validateGridOption(cellHeight, 'Cell height', 'Высота', 1);
-        validateGridOption(offsetX, 'Horizontal offset', 'Смещение по X', 0);
-        validateGridOption(offsetY, 'Vertical offset', 'Смещение по Y', 0);
-        validateGridOption(gapX, 'Horizontal gap', 'Промежуток по X', 0);
-        validateGridOption(gapY, 'Vertical gap', 'Промежуток по Y', 0);
+        validateGridOption(cellWidth, 'cellWidth', 'Cell width', 'Ширина', 1);
+        validateGridOption(cellHeight, 'cellHeight', 'Cell height', 'Высота', 1);
+        validateGridOption(offsetX, 'offsetX', 'Horizontal offset', 'Смещение по X', 0);
+        validateGridOption(offsetY, 'offsetY', 'Vertical offset', 'Смещение по Y', 0);
+        validateGridOption(gapX, 'gapX', 'Horizontal gap', 'Промежуток по X', 0);
+        validateGridOption(gapY, 'gapY', 'Vertical gap', 'Промежуток по Y', 0);
 
         const remainingWidth = width - offsetX - cellWidth;
         const remainingHeight = height - offsetY - cellHeight;

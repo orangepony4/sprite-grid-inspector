@@ -123,6 +123,14 @@ test('guards invalid grids, no complete cells, and the 512-frame limit', () => {
     assert.throws(() => makeGrid(5, 5, { ...cell, cellHeight: 6 }), /No complete cell/);
 });
 
+test('identifies the invalid numeric field without assigning grid-wide errors to a field', () => {
+    const cell = { cellWidth: 1, cellHeight: 1 };
+    for (const field of ['cellWidth', 'cellHeight', 'offsetX', 'offsetY', 'gapX', 'gapY']) {
+        assert.throws(() => makeGrid(5, 5, { ...cell, [field]: -1 }), { gridField: field });
+    }
+    assert.throws(() => makeGrid(5, 5, { ...cell, offsetX: 5 }), error => error.gridField === undefined);
+});
+
 test('finds absolute nonzero-alpha bounds and leaves frame and pixel inputs unchanged', () => {
     const width = 9;
     const height = 6;

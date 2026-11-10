@@ -1,6 +1,6 @@
 {
   "name": "sprite-grid-inspector",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Inspect PNG sprite sheets and export selected grid frames in your browser",
   "scripts": {

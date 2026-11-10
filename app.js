@@ -315,7 +315,22 @@
         tabStop = null;
     }
 
-    function applyGrid(focusedIndex = focusedFrameIndex()) {
+    function markInvalidGridField(field) {
+        let invalidInput;
+        for (const [key, input] of settings) {
+            if (key === field) {
+                input.setAttribute('aria-invalid', 'true');
+                input.setAttribute('aria-describedby', gridError.id);
+                invalidInput = input;
+            } else {
+                input.removeAttribute('aria-invalid');
+                input.removeAttribute('aria-describedby');
+            }
+        }
+        return invalidInput;
+    }
+
+    function applyGrid(focusedIndex, focusInvalidField = false) {
         const options = Object.fromEntries(settings.map(([key, input]) => [key, input.valueAsNumber]));
         let layout;
         let frames;
@@ -324,7 +339,9 @@
             frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
         } catch (error) {
             showError(gridError, error, 'gridFailed', grid ? 'previousGrid' : undefined);
-            if (!grid && focusedIndex !== null) byId('applyGrid').focus();
+            const invalidInput = markInvalidGridField(error?.gridField);
+            if (focusInvalidField && invalidInput) invalidInput.focus();
+            else if (!grid && focusedIndex !== null) byId('applyGrid').focus();
             return;
         }
 
@@ -333,6 +350,7 @@
         grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
         resetGridExportFeedback();
         setMessage(gridError);
+        markInvalidGridField();
         const empty = frames.filter(frame => frame.empty).length;
         setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
         setExportButtonState(downloadManifest, true);
@@ -515,7 +533,7 @@
     byId('loadDemo').addEventListener('click', loadDemo);
     byId('gridForm').addEventListener('submit', event => {
         event.preventDefault();
-        applyGrid();
+        applyGrid(focusedFrameIndex(), true);
     });
 
     frameList.addEventListener('click', event => {
