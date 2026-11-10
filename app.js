@@ -192,8 +192,9 @@
         return String(frame.index + 1).padStart(2, '0');
     }
 
-    function frameFilename(frame) {
-        return `sprite-frame-${frameNumber(frame)}.png`;
+    function frameFilename(frame, frameCount) {
+        const number = frameNumber(frame).padStart(String(frameCount).length, '0');
+        return `sprite-frame-${number}.png`;
     }
 
     function nearestScroll(start, end, visibleStart, visibleEnd) {
@@ -540,11 +541,12 @@
     downloadFrame.addEventListener('click', async () => {
         if (!selected || pendingFrame) return;
         const frame = selected;
+        const filename = frameFilename(frame, grid.frames.length);
         pendingFrame = frame;
         refreshFrameExport();
         try {
             const blob = await frameBlob(source.canvas, frame);
-            saveFile(blob, frameFilename(frame));
+            saveFile(blob, filename);
             if (selected === frame) setMessage(frameExportStatus, 'frameSaved', frameNumber(frame));
         } catch (error) {
             if (selected === frame) showError(frameExportStatus, error, 'frameFailed');
@@ -562,6 +564,7 @@
     downloadBatch.addEventListener('click', async () => {
         if (pendingBatch || downloadBatch.disabled) return;
         const canvas = source.canvas;
+        const frameCount = grid.frames.length;
         const frames = grid.frames.filter(frame => !frame.empty);
         const manifest = new TextEncoder().encode(manifestContent(source, grid));
         pendingBatch = { grid, count: frames.length };
@@ -571,7 +574,7 @@
             const entries = [];
             for (const frame of frames) {
                 const png = await frameBlob(canvas, frame);
-                entries.push({ name: frameFilename(frame), bytes: new Uint8Array(await png.arrayBuffer()) });
+                entries.push({ name: frameFilename(frame, frameCount), bytes: new Uint8Array(await png.arrayBuffer()) });
             }
             entries.push({ name: 'sprite-grid.json', bytes: manifest });
             saveFile(buildStoredZip(entries), 'sprite-frames.zip');

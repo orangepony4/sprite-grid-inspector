@@ -29,7 +29,7 @@ Only full cells are included. A cell is empty when every pixel has zero alpha. T
 
 The JSON lists the source dimensions, grid settings, and frames in row-major order. Frame indexes, rows, and columns start at zero. Coordinates and nonempty bounds use source-image pixels measured from its top-left corner. Empty frames have `bounds: null`.
 
-The ZIP skips empty cells and uses their original one-based frame numbers in the PNG filenames. The manifest still describes every cell. The ZIP stores the PNGs without recompressing them.
+The ZIP skips empty cells and keeps the original one-based frame numbers in the PNG filenames. The manifest describes every cell. Individual and archived PNG filenames use two digits for grids with up to 99 cells and three digits for larger grids, so sorting by filename preserves grid order. The ZIP stores the PNGs without recompressing them.
 
 ### Limits
 
@@ -66,7 +66,7 @@ Released under the [MIT License](LICENSE).
 
 В JSON указаны размеры исходного листа, настройки сетки и кадры по строкам слева направо. Номера строк, столбцов и кадров в JSON начинаются с нуля. Координаты и границы видимой части измеряются в пикселях от левого верхнего угла исходного листа. У пустых кадров `bounds: null`.
 
-В ZIP входят PNG заполненных кадров и JSON со всеми ячейками. Номера в именах PNG начинаются с единицы и соответствуют исходной сетке. Архив сохраняет PNG без повторного сжатия.
+В ZIP входят PNG заполненных кадров и JSON со всеми ячейками. Номера в именах PNG начинаются с единицы и соответствуют исходной сетке. В именах отдельных PNG и файлов в архиве используются две цифры для сеток до 99 ячеек и три для сеток от 100 ячеек. Сортировка по имени сохраняет порядок кадров. Архив сохраняет PNG без повторного сжатия.
 
 ### Ограничения
 
