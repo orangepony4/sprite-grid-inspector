@@ -14,6 +14,8 @@ Check how a PNG sprite sheet splits into frames before using it in a game. The b
 
 For offline use, download `sprite-grid-inspector-<version>-offline.zip` from **Assets**, extract it, and open `index.html`.
 
+The first visit opens in English. Choose **RU** or **EN** in the header to switch the interface language. The grid, selected frame, and exported files stay the same. If browser storage is available, the app remembers the language.
+
 1. Start with the built-in demo. The 64 × 32 sheet uses 16 × 16 cells and contains six occupied frames and two empty ones. **Load demo sheet** restores this example and its grid settings.
 2. To inspect your own sheet, select **Choose PNG**. Set the cell width and height in pixels. Offsets move the grid start from the left and top edges. Gaps add space between neighboring cells. Select **Apply grid** or press Enter in a settings field.
 3. Select a cell in the sheet or in **Frame inspector**. With the frame list focused, use the arrow keys to move between cells and Home or End to go to the edges of the current row. Press Enter or Space to select the focused frame.
@@ -51,10 +53,12 @@ Released under the [MIT License](LICENSE).
 
 Для работы без интернета скачайте `sprite-grid-inspector-<версия>-offline.zip` из раздела **Assets**, распакуйте архив и откройте `index.html`.
 
-1. Начните со встроенного примера. На листе 64 × 32 ячейки размером 16 × 16 пикселей образуют шесть заполненных кадров и два пустых. Кнопка **Load demo sheet** возвращает пример и его настройки сетки.
-2. Чтобы проверить свой лист, нажмите **Choose PNG**. Укажите ширину и высоту ячейки в пикселях. Смещения задают отступ сетки от левого и верхнего края. Промежутки задают расстояние между соседними ячейками. Нажмите **Apply grid** или Enter в поле настроек.
-3. Выберите ячейку на листе или в списке **Frame inspector**. Когда фокус в списке, перемещайтесь по сетке стрелками, а к краям текущей строки переходите клавишами Home и End. Нажмите Enter или пробел, чтобы выбрать кадр.
-4. Кнопка **Download frame PNG** сохраняет выбранную ячейку. **Download JSON manifest** выгружает сетку и координаты кадров. Кнопка **Download occupied frames** сохраняет ZIP с заполненными кадрами и манифестом. Во встроенном примере в архиве будет шесть PNG.
+При первом открытии интерфейс на английском. Нажмите **RU** или **EN** в шапке, чтобы сменить язык. Сетка, выбранный кадр и содержимое экспортируемых файлов сохраняются. Если браузер разрешает хранить настройки, приложение запоминает язык.
+
+1. Начните со встроенного примера. На листе 64 × 32 ячейки размером 16 × 16 пикселей образуют шесть заполненных кадров и два пустых. Кнопка **Загрузить пример** возвращает пример и его настройки сетки.
+2. Чтобы проверить свой лист, нажмите **Выбрать PNG**. Укажите ширину и высоту ячейки в пикселях. Смещения задают отступ сетки от левого и верхнего края. Промежутки задают расстояние между соседними ячейками. Нажмите **Применить сетку** или Enter в поле настроек.
+3. Выберите ячейку на листе или в списке **Кадры**. Когда фокус в списке, перемещайтесь по сетке стрелками, а к краям текущей строки переходите клавишами Home и End. Нажмите Enter или пробел, чтобы выбрать кадр.
+4. Кнопка **Скачать кадр PNG** сохраняет выбранную ячейку. **Скачать JSON-манифест** выгружает сетку и координаты кадров. Кнопка **Скачать заполненные кадры** сохраняет ZIP с заполненными кадрами и манифестом. Во встроенном примере в архиве будет шесть PNG.
 
 ### Что входит в экспорт
 

@@ -18,9 +18,56 @@
     const downloadManifest = byId('downloadManifest');
     const downloadBatch = byId('downloadBatch');
     const exportStatus = byId('exportStatus');
+    const languageToggle = byId('languageToggle');
     const defaults = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
     const settings = Object.keys(defaults).map(key => [key, byId(key)]);
     const byteLimit = 32 * 1024 * 1024;
+    const messages = {
+        switchLanguage: ['Switch to Russian', 'Переключить на английский'],
+        frame: ['Frame {0}', 'Кадр {0}'],
+        occupied: ['Occupied', 'Заполнен'],
+        empty: ['Empty', 'Пуст'],
+        position: ['{0} · {1} × {2} px at ({3}, {4}).', '{0} · {1} × {2} пкс в точке ({3}, {4}).'],
+        visibleBounds: ['Visible bounds {0} × {1} px at ({2}, {3}).', 'Видимая область {0} × {1} пкс в точке ({2}, {3}).'],
+        emptyFrame: ['Empty frame. Every pixel is transparent.', 'Пустой кадр. Все пиксели прозрачны.'],
+        zoomedBounds: ['Preview zoomed to visible pixels.', 'Предпросмотр увеличен до видимой области.'],
+        zoomedPixel: ['Preview zoomed to one visible pixel.', 'Предпросмотр увеличен до одного видимого пикселя.'],
+        chooseFrame: ['Apply a valid grid to select a frame.', 'Примените корректную сетку, чтобы выбрать кадр.'],
+        inspectFrames: ['Apply a valid grid to inspect frames.', 'Примените корректную сетку, чтобы проверить кадры.'],
+        gridSummary: ['{0} columns × {1} rows · {2} frames · {3} occupied · {4} empty', 'Сетка {0} × {1} · Кадров {2} · Заполнено {3} · Пусто {4}'],
+        previousGrid: ['The previous grid is still shown.', 'На экране осталась предыдущая сетка.'],
+        gridFailed: ['Could not apply the grid.', 'Не удалось применить сетку.'],
+        demoSheet: ['Demo sprite sheet', 'Демонстрационный спрайт-лист'],
+        loaded: ['{0} · {1} × {2} px', '{0} · {1} × {2} пкс'],
+        reading: ['Reading PNG…', 'Читаем PNG…'],
+        fileTooLarge: ['Choose a PNG smaller than or equal to 32 MiB.', 'Выберите PNG размером не больше 32 МиБ.'],
+        decodeFailed: ['The browser could not decode this PNG.', 'Браузер не смог декодировать этот PNG.'],
+        dimensionMismatch: ['Decoded image dimensions do not match the PNG header.', 'Размер изображения не совпадает с размером в заголовке PNG.'],
+        loadFailed: ['Could not open the PNG.', 'Не удалось открыть PNG.'],
+        preparingFrame: ['Preparing Frame {0} PNG…', 'Готовим PNG для кадра {0}…'],
+        encodeFailed: ['The browser could not encode Frame {0} as PNG.', 'Браузер не смог сохранить кадр {0} как PNG.'],
+        frameSaved: ['Frame {0} exported as PNG.', 'Кадр {0} сохранён как PNG.'],
+        frameFailed: ['Could not export the frame.', 'Не удалось сохранить кадр.'],
+        manifestSaved: ['Grid exported as JSON.', 'Сетка сохранена как JSON.'],
+        preparingZip: ['Preparing {0} occupied frames…', 'Готовим заполненные кадры ({0})…'],
+        zipSaved: ['Exported {0} PNG files and the grid manifest.', 'Сохранён ZIP с файлами PNG ({0}) и манифестом сетки.'],
+        zipFailed: ['Could not export the frame ZIP.', 'Не удалось сохранить ZIP с кадрами.'],
+    };
+    const languageKey = 'spriteGridLanguage';
+    const staticTranslations = [];
+    for (const [marker, attribute] of [['data-ru', null], ['data-ru-label', 'aria-label']]) {
+        for (const element of document.querySelectorAll(`[${marker}]`)) {
+            const english = attribute ? element.getAttribute(attribute) : element.textContent;
+            staticTranslations.push({ element, attribute, english, russian: element.getAttribute(marker) });
+        }
+    }
+    const visibleMessages = new Map();
+    let language = 'en';
+    try {
+        if (localStorage.getItem(languageKey) === 'ru') language = 'ru';
+    } catch {
+        // Storage can be unavailable for the offline copy.
+    }
 
     let source;
     let grid;
@@ -30,6 +77,50 @@
     let loadVersion = 0;
     let batchPending = false;
     let pendingFrame;
+
+    function translate(key, ...args) {
+        const template = messages[key][language === 'ru' ? 1 : 0];
+        return args.length ? template.replace(/\{(\d+)\}/g, (_, index) => args[Number(index)]) : template;
+    }
+
+    function setMessage(element, key, ...args) {
+        if (!key) {
+            visibleMessages.delete(element);
+            element.textContent = '';
+            return;
+        }
+        const render = typeof key === 'function' ? key : () => translate(key, ...args);
+        visibleMessages.set(element, render);
+        element.textContent = render();
+    }
+
+    function showError(element, error, fallback, keepGrid = false) {
+        setMessage(element, () => {
+            const text = error?.messageKey
+                ? translate(error.messageKey, ...error.messageArgs)
+                : (language === 'ru' ? error?.messageRu : error?.message) || translate(fallback);
+            return keepGrid ? `${text} ${translate('previousGrid')}` : text;
+        });
+    }
+
+    function appError(key, ...args) {
+        return Object.assign(new Error(translate(key, ...args)), { messageKey: key, messageArgs: args });
+    }
+
+    function applyLanguage() {
+        document.documentElement.lang = language;
+        for (const { element, attribute, english, russian } of staticTranslations) {
+            const text = language === 'ru' ? russian : english;
+            if (attribute) element.setAttribute(attribute, text);
+            else element.textContent = text;
+        }
+        languageToggle.textContent = language === 'ru' ? 'EN' : 'RU';
+        const switchLabel = translate('switchLanguage');
+        languageToggle.setAttribute('aria-label', switchLabel);
+        languageToggle.title = switchLabel;
+        for (const [element, render] of visibleMessages) element.textContent = render();
+        frameButtons.forEach((button, index) => updateFrameButton(button, grid.frames[index]));
+    }
 
     function createSourceCanvas(width, height) {
         const canvas = document.createElement('canvas');
@@ -92,7 +183,7 @@
     }
 
     function frameLabel(frame) {
-        return `Frame ${frameNumber(frame)}`;
+        return translate('frame', frameNumber(frame));
     }
 
     function frameNumber(frame) {
@@ -158,7 +249,7 @@
         const fullPreview = drawFramePreview(frame);
         const { bounds } = frame;
         if (!bounds || !isBlankDownscale(fullPreview, frame)) return '';
-        if (!isBlankDownscale(drawFramePreview(bounds), bounds)) return ' Preview zoomed to visible pixels.';
+        if (!isBlankDownscale(drawFramePreview(bounds), bounds)) return 'zoomedBounds';
 
         // Widely scattered pixels can disappear even after fitting their bounds.
         // The top row of the measured bounds contains at least one visible pixel.
@@ -166,19 +257,19 @@
         let { x } = bounds;
         while (source.rgba[(y * source.width + x) * 4 + 3] === 0) x++;
         drawFramePreview({ x, y, width: 1, height: 1 });
-        return ' Preview zoomed to one visible pixel.';
+        return 'zoomedPixel';
     }
 
     function renderSelectedFrame(frame) {
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
-        if (!batchPending) exportStatus.textContent = '';
+        if (!batchPending) setMessage(exportStatus);
         refreshFrameExport();
         frameCanvas.hidden = !frame;
         if (!frame) {
             frameCanvas.width = 1;
             frameCanvas.height = 1;
-            frameDetails.textContent = 'Apply a valid grid to select a frame.';
+            setMessage(frameDetails, 'chooseFrame');
             renderSheet();
             return;
         }
@@ -187,12 +278,18 @@
         tabStop.setAttribute('aria-pressed', 'true');
         const previewNote = renderFramePreview(frame);
         const bounds = frame.bounds;
-        const content = bounds
-            ? `Visible bounds ${bounds.width} × ${bounds.height} px at (${bounds.x}, ${bounds.y}).`
-            : 'Empty frame. Every pixel is transparent.';
-        frameDetails.textContent = `${frameLabel(frame)} · ${frame.width} × ${frame.height} px at (${frame.x}, ${frame.y}). ${content}${previewNote}`;
+        setMessage(frameDetails, () => {
+            const position = translate('position', frameLabel(frame), frame.width, frame.height, frame.x, frame.y);
+            const content = bounds ? translate('visibleBounds', bounds.width, bounds.height, bounds.x, bounds.y) : translate('emptyFrame');
+            return previewNote ? `${position} ${content} ${translate(previewNote)}` : `${position} ${content}`;
+        });
         renderSheet();
         revealSelection(frame);
+    }
+
+    function updateFrameButton(button, frame) {
+        button.firstElementChild.textContent = frameLabel(frame);
+        button.lastElementChild.textContent = translate(frame.empty ? 'empty' : 'occupied');
     }
 
     function renderFrameList() {
@@ -204,11 +301,8 @@
             button.dataset.empty = String(frame.empty);
             button.tabIndex = -1;
             button.setAttribute('aria-pressed', 'false');
-            const name = document.createElement('strong');
-            name.textContent = frameLabel(frame);
-            const badge = document.createElement('span');
-            badge.textContent = frame.empty ? 'Empty' : 'Occupied';
-            button.append(name, ' ', badge);
+            button.append(document.createElement('strong'), ' ', document.createElement('span'));
+            updateFrameButton(button, frame);
             return button;
         });
         frameList.style.setProperty('--frame-columns', String(grid.columns));
@@ -224,7 +318,7 @@
             layout = makeGrid(source.width, source.height, options);
             frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
         } catch (error) {
-            gridError.textContent = grid ? `${error.message} The previous grid is still shown.` : error.message;
+            showError(gridError, error, 'gridFailed', Boolean(grid));
             if (!grid && focusedIndex !== null) byId('applyGrid').focus();
             return;
         }
@@ -232,9 +326,9 @@
         const oldIndex = selected?.index ?? 0;
         selected = null;
         grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
-        gridError.textContent = '';
+        setMessage(gridError);
         const empty = frames.filter(frame => frame.empty).length;
-        gridSummary.textContent = `${layout.columns} columns × ${layout.rows} rows · ${frames.length} frames · ${frames.length - empty} occupied · ${empty} empty`;
+        setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
         downloadManifest.disabled = false;
         refreshBatchButton();
         renderFrameList();
@@ -242,7 +336,7 @@
         if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
     }
 
-    function useSource(canvas, context, label) {
+    function useSource(canvas, context, fileName) {
         const focusedIndex = focusedFrameIndex();
         const { width, height } = canvas;
         const rgba = context.getImageData(0, 0, width, height).data;
@@ -252,12 +346,12 @@
         tabStop = null;
         frameButtons = [];
         frameList.replaceChildren();
-        gridSummary.textContent = 'Apply a valid grid to inspect frames.';
+        setMessage(gridSummary, 'inspectFrames');
         downloadManifest.disabled = true;
         refreshBatchButton();
         renderSelectedFrame(null);
         loadStatus.dataset.error = 'false';
-        loadStatus.textContent = `${label} · ${width} × ${height} px`;
+        setMessage(loadStatus, () => translate('loaded', fileName ?? translate('demoSheet'), width, height));
         applyGrid(focusedIndex);
     }
 
@@ -282,16 +376,16 @@
             }));
         }
         for (const [key, input] of settings) input.value = defaults[key];
-        useSource(canvas, context, 'Demo sprite sheet');
+        useSource(canvas, context);
     }
 
     async function loadFile(file) {
         const version = ++loadVersion;
         loadStatus.dataset.error = 'false';
-        loadStatus.textContent = 'Reading PNG…';
+        setMessage(loadStatus, 'reading');
         let bitmap;
         try {
-            if (file.size > byteLimit) throw new Error('Choose a PNG smaller than or equal to 32 MiB.');
+            if (file.size > byteLimit) throw appError('fileTooLarge');
             const header = new Uint8Array(await file.slice(0, 33).arrayBuffer());
             if (version !== loadVersion) return;
             const { width, height } = inspectPngHeader(header);
@@ -313,11 +407,11 @@
             try {
                 bitmap = await createImageBitmap(png);
             } catch {
-                throw new Error('The browser could not decode this PNG.');
+                throw appError('decodeFailed');
             }
             if (version !== loadVersion) return;
             if (bitmap.width !== width || bitmap.height !== height) {
-                throw new Error('Decoded image dimensions do not match the PNG header.');
+                throw appError('dimensionMismatch');
             }
             const { canvas, context } = createSourceCanvas(width, height);
             context.drawImage(bitmap, 0, 0);
@@ -325,7 +419,7 @@
         } catch (error) {
             if (version !== loadVersion) return;
             loadStatus.dataset.error = 'true';
-            loadStatus.textContent = error.message;
+            showError(loadStatus, error, 'loadFailed');
         } finally {
             bitmap?.close();
         }
@@ -351,9 +445,8 @@
 
     function refreshFrameExport() {
         setExportButtonState(downloadFrame, selected, pendingFrame);
-        frameExportStatus.textContent = pendingFrame && pendingFrame === selected
-            ? `Preparing ${frameLabel(pendingFrame)} PNG…`
-            : '';
+        setMessage(frameExportStatus, pendingFrame && pendingFrame === selected ? 'preparingFrame' : null,
+            pendingFrame ? frameNumber(pendingFrame) : null);
     }
 
     function refreshBatchButton() {
@@ -374,7 +467,7 @@
         crop.getContext('2d').drawImage(canvas, frame.x, frame.y, frame.width, frame.height,
             0, 0, frame.width, frame.height);
         const blob = await new Promise(resolve => crop.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error(`The browser could not encode ${frameLabel(frame)} as PNG.`);
+        if (!blob) throw appError('encodeFailed', frameNumber(frame));
         return blob;
     }
 
@@ -426,24 +519,22 @@
         const frame = selected;
         pendingFrame = frame;
         refreshFrameExport();
-        let message;
         try {
             const blob = await frameBlob(source.canvas, frame);
             saveFile(blob, frameFilename(frame));
-            message = `${frameLabel(frame)} exported as PNG.`;
+            if (selected === frame) setMessage(frameExportStatus, 'frameSaved', frameNumber(frame));
         } catch (error) {
-            message = error.message;
+            if (selected === frame) showError(frameExportStatus, error, 'frameFailed');
         } finally {
             pendingFrame = undefined;
             setExportButtonState(downloadFrame, selected, false);
-            if (selected === frame) frameExportStatus.textContent = message;
         }
     });
     downloadManifest.addEventListener('click', () => {
         if (!grid) return;
         const blob = new Blob([manifestContent(source, grid)], { type: 'application/json' });
         saveFile(blob, 'sprite-grid.json');
-        exportStatus.textContent = 'Grid exported as JSON.';
+        setMessage(exportStatus, 'manifestSaved');
     });
     downloadBatch.addEventListener('click', async () => {
         if (batchPending || downloadBatch.disabled) return;
@@ -452,7 +543,7 @@
         const manifest = new TextEncoder().encode(manifestContent(source, grid));
         batchPending = true;
         refreshBatchButton();
-        exportStatus.textContent = `Preparing ${frames.length} occupied frames…`;
+        setMessage(exportStatus, 'preparingZip', frames.length);
         try {
             const entries = [];
             for (const frame of frames) {
@@ -461,14 +552,25 @@
             }
             entries.push({ name: 'sprite-grid.json', bytes: manifest });
             saveFile(buildStoredZip(entries), 'sprite-frames.zip');
-            exportStatus.textContent = `Exported ${frames.length} PNG files and the grid manifest.`;
+            setMessage(exportStatus, 'zipSaved', frames.length);
         } catch (error) {
-            exportStatus.textContent = error.message;
+            showError(exportStatus, error, 'zipFailed');
         } finally {
             batchPending = false;
             refreshBatchButton();
         }
     });
 
+    languageToggle.addEventListener('click', () => {
+        language = language === 'en' ? 'ru' : 'en';
+        applyLanguage();
+        try {
+            localStorage.setItem(languageKey, language);
+        } catch {
+            // The current page still uses the selected language.
+        }
+    });
+    applyLanguage();
+    languageToggle.hidden = false;
     loadDemo();
 })();

@@ -69,6 +69,16 @@ button:disabled, button[aria-disabled="true"]:not(:focus-visible) { opacity: .55
     border-bottom: 1px solid var(--line);
 }
 
+.masthead-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem .6rem;
+    min-width: 0;
+}
+
+.language-toggle { min-inline-size: 2.75rem; }
+
 .brand {
     display: flex;
     align-items: center;
@@ -127,6 +137,7 @@ h1, h2 {
     font-family: var(--serif);
     font-weight: 400;
     letter-spacing: -.037em;
+    overflow-wrap: anywhere;
 }
 
 h1 { font-size: clamp(2.2rem, 4.8vw, 3.65rem); line-height: 1.03; }

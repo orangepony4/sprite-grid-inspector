@@ -13,53 +13,56 @@
     <script src="app.js" defer></script>
 </head>
 <body>
-<a class="skip-link" href="#sheetHeading">Skip to the sprite sheet</a>
+<a class="skip-link" href="#sheetHeading" data-ru="Перейти к спрайт-листу">Skip to the sprite sheet</a>
 <div class="page">
     <header class="masthead">
         <p class="brand"><span class="brand-mark" aria-hidden="true"></span> Sprite Grid Inspector</p>
-        <p class="local-label">Local processing</p>
+        <div class="masthead-tools">
+            <p class="local-label" data-ru="Обработка в браузере">Local processing</p>
+            <button class="button secondary language-toggle" type="button" id="languageToggle" aria-label="Switch to Russian" hidden>RU</button>
+        </div>
     </header>
 
     <main>
         <div class="intro">
             <div>
-                <p class="kicker">PNG workspace</p>
-                <h1>Inspect a sprite sheet</h1>
+                <p class="kicker" data-ru="Работа с PNG">PNG workspace</p>
+                <h1 data-ru="Проверьте спрайт-лист">Inspect a sprite sheet</h1>
             </div>
-            <p class="intro-copy">Set the grid, check what fits in each cell, and export frames at their original size.</p>
+            <p class="intro-copy" data-ru="Настройте сетку, проверьте ячейки и сохраните кадры в исходном размере.">Set the grid, check what fits in each cell, and export frames at their original size.</p>
         </div>
         <noscript><p class="notice">Enable JavaScript to inspect and export sprite frames.</p></noscript>
 
         <div class="source-bar">
             <div class="source-meta">
-                <p class="kicker">Source PNG</p>
+                <p class="kicker" data-ru="Исходный PNG">Source PNG</p>
                 <p class="status" id="loadStatus" role="status"></p>
             </div>
             <div class="file-picker">
                 <input type="file" id="fileInput" class="sr-only" accept="image/png,.png">
-                <label for="fileInput" class="button secondary">Choose PNG</label>
+                <label for="fileInput" class="button secondary" data-ru="Выбрать PNG">Choose PNG</label>
             </div>
-            <button class="button secondary" type="button" id="loadDemo">Load demo sheet</button>
+            <button class="button secondary" type="button" id="loadDemo" data-ru="Загрузить пример">Load demo sheet</button>
         </div>
 
         <div class="workspace">
             <section class="panel sheet-preview" aria-labelledby="sheetHeading">
                 <header class="section-heading">
                     <div>
-                        <p class="kicker">01 / Preview</p>
-                        <h2 id="sheetHeading" tabindex="-1">Sprite sheet</h2>
+                        <p class="kicker" data-ru="01 / Просмотр">01 / Preview</p>
+                        <h2 id="sheetHeading" tabindex="-1" data-ru="Спрайт-лист">Sprite sheet</h2>
                     </div>
-                    <span class="panel-note">Transparency preview</span>
+                    <span class="panel-note" data-ru="Просмотр прозрачности">Transparency preview</span>
                 </header>
-                <div class="sheet-viewport" role="region" aria-label="Scrollable sprite sheet preview" tabindex="0">
-                    <canvas id="sheetCanvas" width="1" height="1" role="img" aria-label="Sprite sheet with its frame grid"></canvas>
+                <div class="sheet-viewport" role="region" aria-label="Scrollable sprite sheet preview" data-ru-label="Прокручиваемый просмотр спрайт-листа" tabindex="0">
+                    <canvas id="sheetCanvas" width="1" height="1" role="img" aria-label="Sprite sheet with its frame grid" data-ru-label="Спрайт-лист с сеткой кадров"></canvas>
                 </div>
                 <div class="sheet-caption">
-                    <p class="help">Select a cell to inspect its visible pixels.</p>
-                    <ul class="grid-key" aria-label="Grid legend">
-                        <li><span class="key-mark key-selected" aria-hidden="true"></span>Selected</li>
-                        <li><span class="key-mark" aria-hidden="true"></span>Occupied</li>
-                        <li><span class="key-mark key-empty" aria-hidden="true"></span>Empty</li>
+                    <p class="help" data-ru="Выберите ячейку, чтобы проверить её видимые пиксели.">Select a cell to inspect its visible pixels.</p>
+                    <ul class="grid-key" aria-label="Grid legend" data-ru-label="Обозначения сетки">
+                        <li><span class="key-mark key-selected" aria-hidden="true"></span><span data-ru="Выбран">Selected</span></li>
+                        <li><span class="key-mark" aria-hidden="true"></span><span data-ru="Заполнен">Occupied</span></li>
+                        <li><span class="key-mark key-empty" aria-hidden="true"></span><span data-ru="Пуст">Empty</span></li>
                     </ul>
                 </div>
             </section>
@@ -67,55 +70,55 @@
             <section class="panel grid-settings" aria-labelledby="settingsHeading">
                 <header class="section-heading">
                     <div>
-                        <p class="kicker">02 / Configure</p>
-                        <h2 id="settingsHeading">Grid settings</h2>
+                        <p class="kicker" data-ru="02 / Настройка">02 / Configure</p>
+                        <h2 id="settingsHeading" data-ru="Настройки сетки">Grid settings</h2>
                     </div>
-                    <span class="panel-note">px</span>
+                    <span class="panel-note" data-ru="пкс">px</span>
                 </header>
                 <form class="grid-fields" id="gridForm" novalidate>
                     <fieldset>
-                        <legend>Cell size</legend>
+                        <legend data-ru="Размер ячейки">Cell size</legend>
                         <div class="field-row">
                             <div class="field">
-                                <label for="cellWidth">Width</label>
+                                <label for="cellWidth" data-ru="Ширина">Width</label>
                                 <input type="number" id="cellWidth" min="1" step="1" value="16" inputmode="numeric">
                             </div>
                             <div class="field">
-                                <label for="cellHeight">Height</label>
+                                <label for="cellHeight" data-ru="Высота">Height</label>
                                 <input type="number" id="cellHeight" min="1" step="1" value="16" inputmode="numeric">
                             </div>
                         </div>
                     </fieldset>
                     <fieldset>
-                        <legend>Offset</legend>
+                        <legend data-ru="Смещение">Offset</legend>
                         <div class="field-row">
                             <div class="field">
-                                <label for="offsetX">X offset</label>
+                                <label for="offsetX" data-ru="Смещение по X">X offset</label>
                                 <input type="number" id="offsetX" min="0" step="1" value="0" inputmode="numeric">
                             </div>
                             <div class="field">
-                                <label for="offsetY">Y offset</label>
+                                <label for="offsetY" data-ru="Смещение по Y">Y offset</label>
                                 <input type="number" id="offsetY" min="0" step="1" value="0" inputmode="numeric">
                             </div>
                         </div>
                     </fieldset>
                     <fieldset>
-                        <legend>Gap between cells</legend>
+                        <legend data-ru="Промежутки между ячейками">Gap between cells</legend>
                         <div class="field-row">
                             <div class="field">
-                                <label for="gapX">X gap</label>
+                                <label for="gapX" data-ru="Промежуток по X">X gap</label>
                                 <input type="number" id="gapX" min="0" step="1" value="0" inputmode="numeric">
                             </div>
                             <div class="field">
-                                <label for="gapY">Y gap</label>
+                                <label for="gapY" data-ru="Промежуток по Y">Y gap</label>
                                 <input type="number" id="gapY" min="0" step="1" value="0" inputmode="numeric">
                             </div>
                         </div>
                     </fieldset>
                 </form>
                 <div class="grid-apply">
-                    <button class="button primary" type="submit" form="gridForm" id="applyGrid" aria-describedby="gridHelp gridError">Apply grid</button>
-                    <p class="help" id="gridHelp">Offsets start at the top-left pixel.</p>
+                    <button class="button primary" type="submit" form="gridForm" id="applyGrid" aria-describedby="gridHelp gridError" data-ru="Применить сетку">Apply grid</button>
+                    <p class="help" id="gridHelp" data-ru="Смещения отсчитываются от верхнего левого пикселя.">Offsets start at the top-left pixel.</p>
                     <p class="status error" id="gridError" role="status"></p>
                 </div>
             </section>
@@ -123,17 +126,17 @@
             <section class="panel frame-index" aria-labelledby="framesHeading">
                 <header class="section-heading">
                     <div>
-                        <p class="kicker">03 / Inspect</p>
-                        <h2 id="framesHeading">Frame inspector</h2>
+                        <p class="kicker" data-ru="03 / Проверка">03 / Inspect</p>
+                        <h2 id="framesHeading" data-ru="Кадры">Frame inspector</h2>
                     </div>
                     <p id="gridSummary" class="status summary" role="status"></p>
                 </header>
-                <h3 id="frameListHeading" class="sr-only">Frame list</h3>
+                <h3 id="frameListHeading" class="sr-only" data-ru="Список кадров">Frame list</h3>
                 <div class="frame-list" id="frameList" role="group" aria-labelledby="frameListHeading" aria-describedby="frameListHelp"></div>
-                <p class="help" id="frameListHelp">Arrow keys follow the grid. Enter or Space selects a frame.</p>
+                <p class="help" id="frameListHelp" data-ru="Стрелки перемещают фокус по сетке. Нажмите Enter или пробел, чтобы выбрать кадр.">Arrow keys follow the grid. Enter or Space selects a frame.</p>
                 <div class="export-actions">
-                    <button class="button secondary" type="button" id="downloadManifest" disabled>Download JSON manifest</button>
-                    <button class="button primary" type="button" id="downloadBatch" disabled>Download occupied frames</button>
+                    <button class="button secondary" type="button" id="downloadManifest" data-ru="Скачать JSON-манифест" disabled>Download JSON manifest</button>
+                    <button class="button primary" type="button" id="downloadBatch" data-ru="Скачать заполненные кадры" disabled>Download occupied frames</button>
                 </div>
                 <p class="status" id="exportStatus" role="status"></p>
             </section>
@@ -141,23 +144,23 @@
             <section class="panel selected-frame" aria-labelledby="selectedHeading">
                 <header class="section-heading">
                     <div>
-                        <p class="kicker">Frame detail</p>
-                        <h2 id="selectedHeading">Selected frame</h2>
+                        <p class="kicker" data-ru="Свойства кадра">Frame detail</p>
+                        <h2 id="selectedHeading" data-ru="Выбранный кадр">Selected frame</h2>
                     </div>
                 </header>
                 <div class="frame-viewport">
-                    <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Selected sprite frame preview"></canvas>
+                    <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Selected sprite frame preview" data-ru-label="Просмотр выбранного кадра"></canvas>
                 </div>
                 <p class="status details" id="frameDetails" role="status"></p>
-                <button class="button secondary" type="button" id="downloadFrame" disabled>Download frame PNG</button>
+                <button class="button secondary" type="button" id="downloadFrame" data-ru="Скачать кадр PNG" disabled>Download frame PNG</button>
                 <p class="status" id="frameExportStatus" role="status"></p>
             </section>
         </div>
     </main>
 
     <footer class="footer">
-        <p>Files stay in your browser.</p>
-        <p>PNG frames · JSON coordinates · ZIP batch</p>
+        <p data-ru="Файлы остаются в вашем браузере.">Files stay in your browser.</p>
+        <p data-ru="Кадры PNG · координаты JSON · архив ZIP">PNG frames · JSON coordinates · ZIP batch</p>
     </footer>
 </div>
 </body>
