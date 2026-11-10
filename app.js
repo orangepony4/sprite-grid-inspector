@@ -329,7 +329,7 @@
         setMessage(gridError);
         const empty = frames.filter(frame => frame.empty).length;
         setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
-        downloadManifest.disabled = false;
+        setExportButtonState(downloadManifest, true);
         refreshBatchButton();
         renderFrameList();
         renderSelectedFrame(frames[oldIndex] ?? frames[0]);
@@ -343,16 +343,18 @@
         source = { canvas, width, height, rgba };
         grid = null;
         selected = null;
-        tabStop = null;
-        frameButtons = [];
-        frameList.replaceChildren();
-        setMessage(gridSummary, 'inspectFrames');
-        downloadManifest.disabled = true;
-        refreshBatchButton();
-        renderSelectedFrame(null);
         loadStatus.dataset.error = 'false';
         setMessage(loadStatus, () => translate('loaded', fileName ?? translate('demoSheet'), width, height));
         applyGrid(focusedIndex);
+        if (!grid) {
+            tabStop = null;
+            frameButtons = [];
+            frameList.replaceChildren();
+            setMessage(gridSummary, 'inspectFrames');
+            setExportButtonState(downloadManifest, false);
+            refreshBatchButton();
+            renderSelectedFrame(null);
+        }
     }
 
     function loadDemo() {
@@ -436,9 +438,13 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    function setExportButtonState(button, available, pending) {
+    function setExportButtonState(button, available, pending = false) {
         // A pending export keeps its keyboard focus while blocking repeat activation.
-        button.disabled = !pending && !available;
+        const disabled = !pending && !available;
+        if (disabled && document.activeElement === button) {
+            (grid ? downloadManifest : byId('applyGrid')).focus();
+        }
+        button.disabled = disabled;
         if (pending) button.setAttribute('aria-disabled', 'true');
         else button.removeAttribute('aria-disabled');
     }
