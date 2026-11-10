@@ -17,6 +17,7 @@
     const frameExportStatus = byId('frameExportStatus');
     const downloadManifest = byId('downloadManifest');
     const downloadBatch = byId('downloadBatch');
+    const manifestExportStatus = byId('manifestExportStatus');
     const exportStatus = byId('exportStatus');
     const languageToggle = byId('languageToggle');
     const defaults = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
@@ -52,6 +53,7 @@
         preparingZip: ['Preparing {0} occupied frames…', 'Готовим заполненные кадры ({0})…'],
         zipSaved: ['Exported {0} PNG files and the grid manifest.', 'Сохранён ZIP с файлами PNG ({0}) и манифестом сетки.'],
         zipFailed: ['Could not export the frame ZIP.', 'Не удалось сохранить ZIP с кадрами.'],
+        previousZip: ['This ZIP export uses the grid that was open when it started.', 'Для этого ZIP используется сетка, открытая на момент начала экспорта.'],
     };
     const languageKey = 'spriteGridLanguage';
     const staticTranslations = [];
@@ -75,7 +77,7 @@
     let frameButtons = [];
     let tabStop;
     let loadVersion = 0;
-    let batchPending = false;
+    let pendingBatch;
     let pendingFrame;
 
     function translate(key, ...args) {
@@ -94,12 +96,12 @@
         element.textContent = render();
     }
 
-    function showError(element, error, fallback, keepGrid = false) {
+    function showError(element, error, fallback, detail) {
         setMessage(element, () => {
             const text = error?.messageKey
                 ? translate(error.messageKey, ...error.messageArgs)
                 : (language === 'ru' ? error?.messageRu : error?.message) || translate(fallback);
-            return keepGrid ? `${text} ${translate('previousGrid')}` : text;
+            return detail ? `${text} ${translate(detail)}` : text;
         });
     }
 
@@ -263,7 +265,6 @@
     function renderSelectedFrame(frame) {
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
-        if (!batchPending) setMessage(exportStatus);
         refreshFrameExport();
         frameCanvas.hidden = !frame;
         if (!frame) {
@@ -318,7 +319,7 @@
             layout = makeGrid(source.width, source.height, options);
             frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
         } catch (error) {
-            showError(gridError, error, 'gridFailed', Boolean(grid));
+            showError(gridError, error, 'gridFailed', grid ? 'previousGrid' : undefined);
             if (!grid && focusedIndex !== null) byId('applyGrid').focus();
             return;
         }
@@ -326,6 +327,7 @@
         const oldIndex = selected?.index ?? 0;
         selected = null;
         grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
+        resetGridExportFeedback();
         setMessage(gridError);
         const empty = frames.filter(frame => frame.empty).length;
         setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
@@ -347,6 +349,7 @@
         setMessage(loadStatus, () => translate('loaded', fileName ?? translate('demoSheet'), width, height));
         applyGrid(focusedIndex);
         if (!grid) {
+            resetGridExportFeedback();
             tabStop = null;
             frameButtons = [];
             frameList.replaceChildren();
@@ -456,7 +459,21 @@
     }
 
     function refreshBatchButton() {
-        setExportButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), batchPending);
+        setExportButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), pendingBatch);
+    }
+
+    function setBatchMessage(key) {
+        const { grid: exportedGrid, count } = pendingBatch;
+        setMessage(exportStatus, () => {
+            const text = translate(key, count);
+            return grid === exportedGrid ? text : `${text} ${translate('previousZip')}`;
+        });
+    }
+
+    function resetGridExportFeedback() {
+        setMessage(manifestExportStatus);
+        if (pendingBatch) setBatchMessage('preparingZip');
+        else setMessage(exportStatus);
     }
 
     function manifestContent(image, currentGrid) {
@@ -540,16 +557,16 @@
         if (!grid) return;
         const blob = new Blob([manifestContent(source, grid)], { type: 'application/json' });
         saveFile(blob, 'sprite-grid.json');
-        setMessage(exportStatus, 'manifestSaved');
+        setMessage(manifestExportStatus, 'manifestSaved');
     });
     downloadBatch.addEventListener('click', async () => {
-        if (batchPending || downloadBatch.disabled) return;
+        if (pendingBatch || downloadBatch.disabled) return;
         const canvas = source.canvas;
         const frames = grid.frames.filter(frame => !frame.empty);
         const manifest = new TextEncoder().encode(manifestContent(source, grid));
-        batchPending = true;
+        pendingBatch = { grid, count: frames.length };
         refreshBatchButton();
-        setMessage(exportStatus, 'preparingZip', frames.length);
+        setBatchMessage('preparingZip');
         try {
             const entries = [];
             for (const frame of frames) {
@@ -558,11 +575,11 @@
             }
             entries.push({ name: 'sprite-grid.json', bytes: manifest });
             saveFile(buildStoredZip(entries), 'sprite-frames.zip');
-            setMessage(exportStatus, 'zipSaved', frames.length);
+            setBatchMessage('zipSaved');
         } catch (error) {
-            showError(exportStatus, error, 'zipFailed');
+            showError(exportStatus, error, 'zipFailed', grid !== pendingBatch.grid ? 'previousZip' : undefined);
         } finally {
-            batchPending = false;
+            pendingBatch = undefined;
             refreshBatchButton();
         }
     });
