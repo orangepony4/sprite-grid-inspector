@@ -50,6 +50,7 @@ button:disabled, button[aria-disabled="true"]:not(:focus-visible) { opacity: .55
     position: fixed;
     z-index: 2;
     inset: .6rem auto auto .6rem;
+    max-inline-size: calc(100% - 1.2rem);
     padding: .6rem .8rem;
     background: var(--surface);
     color: var(--accent);
@@ -228,7 +229,7 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .grid-fields legend { padding: 0; font-size: .79rem; font-weight: 740; }
 .field-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 4rem), 1fr));
     gap: .5rem;
     margin-top: .2rem;
 }
@@ -366,19 +367,24 @@ canvas[hidden] { display: none; }
 }
 
 @media (min-width: 35rem) and (max-width: 47rem) {
-    .grid-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-fields { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
 }
 
 @media (max-width: 35rem) {
-    .grid-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-fields {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc((100% - .53rem) / 2))), 1fr));
+    }
     .grid-fields fieldset:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 37rem) {
-    .masthead { flex-wrap: nowrap; gap: .5rem; }
+    .masthead { gap: .5rem; }
     .intro-copy { font-size: .86rem; }
-    .source-bar { grid-template-columns: minmax(0, 1fr) auto; }
+    .source-bar {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc((100% - .7rem) / 2))), 1fr));
+    }
     .source-meta { grid-column: 1 / -1; }
+    .file-picker label { text-align: center; }
 }
 
 @media (max-width: 23rem) {
