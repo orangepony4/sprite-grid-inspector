@@ -2,16 +2,26 @@
 
 [![Tests](https://github.com/orangepony4/sprite-grid-inspector/actions/workflows/test.yml/badge.svg)](https://github.com/orangepony4/sprite-grid-inspector/actions/workflows/test.yml)
 
+[English](#english) · [Русский](#русский)
+
+## English
+
 Check how a PNG sprite sheet splits into frames before using it in a game. The browser preview overlays the grid, marks empty frames, and shows the bounds of visible pixels. All file processing stays in the browser.
 
-## Inspect a sheet
+### Inspect a sheet
 
-1. [Open Sprite Grid Inspector](https://orangepony4.github.io/sprite-grid-inspector/) or extract the offline ZIP from the [latest release](https://github.com/orangepony4/sprite-grid-inspector/releases/latest) and open `index.html`. Try the demo or choose a PNG file.
-2. Set the cell width and height in pixels. Offsets move the start from the left and top edges, and gaps add space between cells.
-3. Choose **Apply grid** or press Enter in a settings field. Select a frame in the sheet or in the keyboard-accessible list. Both panels scroll to keep the chosen frame in view.
-4. Download the selected cell as PNG, export the grid as JSON, or download all occupied cells and the manifest together as ZIP.
+**[Try it here](https://orangepony4.github.io/sprite-grid-inspector/)** · [Offline ZIP in the latest release](https://github.com/orangepony4/sprite-grid-inspector/releases/latest)
+
+For offline use, download `sprite-grid-inspector-<version>-offline.zip` from **Assets**, extract it, and open `index.html`.
+
+1. Start with the built-in demo. The 64 × 32 sheet uses 16 × 16 cells and contains six occupied frames and two empty ones. **Load demo sheet** restores this example and its grid settings.
+2. To inspect your own sheet, select **Choose PNG**. Set the cell width and height in pixels. Offsets move the grid start from the left and top edges. Gaps add space between neighboring cells. Select **Apply grid** or press Enter in a settings field.
+3. Select a cell in the sheet or in **Frame inspector**. With the frame list focused, use the arrow keys to move between cells and Home or End to go to the edges of the current row. Press Enter or Space to select the focused frame.
+4. Select **Download frame PNG** to save the current cell, **Download JSON manifest** to save the grid and frame positions, or **Download occupied frames** to save a ZIP. The demo ZIP contains six PNGs and the manifest.
 
 ![Sprite Grid Inspector showing the 64 × 32 demo sheet, grid controls, two empty cells, and a preview of the selected frame](docs/preview.webp)
+
+### Export details
 
 Only full cells are included. A cell is empty when every pixel has zero alpha. The browser encodes the selected cell as a fresh PNG at its original dimensions and keeps its transparency. The preview may be scaled to fit.
 
@@ -19,12 +29,47 @@ The JSON lists the source dimensions, grid settings, and frames in row-major ord
 
 The ZIP skips empty cells and uses their original one-based frame numbers in the PNG filenames. The manifest still describes every cell. The ZIP stores the PNGs without recompressing them.
 
-## Limits
+### Limits
 
 The browser accepts PNG files up to 32 MiB and 4096 × 4096 pixels. A grid can contain up to 512 full cells. Animated PNGs use their default still image, including files with a separate poster image. Frame positions follow the PNG's stored pixel orientation, regardless of EXIF rotation metadata.
 
-## Development
+### Development
 
 Run `npm test` with Node.js 20 or newer. The browser application has no runtime dependencies.
 
 Released under the [MIT License](LICENSE).
+
+---
+
+## Русский
+
+Проверьте, как PNG-спрайт-лист делится на кадры для игры. Программа накладывает сетку, отмечает пустые кадры и показывает границы видимых пикселей. Файлы обрабатываются в браузере.
+
+### Как проверить спрайт-лист
+
+**[Попробовать здесь](https://orangepony4.github.io/sprite-grid-inspector/)** · [ZIP для работы без интернета в последнем релизе](https://github.com/orangepony4/sprite-grid-inspector/releases/latest)
+
+Для работы без интернета скачайте `sprite-grid-inspector-<версия>-offline.zip` из раздела **Assets**, распакуйте архив и откройте `index.html`.
+
+1. Начните со встроенного примера. На листе 64 × 32 ячейки размером 16 × 16 пикселей образуют шесть заполненных кадров и два пустых. Кнопка **Load demo sheet** возвращает пример и его настройки сетки.
+2. Чтобы проверить свой лист, нажмите **Choose PNG**. Укажите ширину и высоту ячейки в пикселях. Смещения задают отступ сетки от левого и верхнего края. Промежутки задают расстояние между соседними ячейками. Нажмите **Apply grid** или Enter в поле настроек.
+3. Выберите ячейку на листе или в списке **Frame inspector**. Когда фокус в списке, перемещайтесь по сетке стрелками, а к краям текущей строки переходите клавишами Home и End. Нажмите Enter или пробел, чтобы выбрать кадр.
+4. Кнопка **Download frame PNG** сохраняет выбранную ячейку. **Download JSON manifest** выгружает сетку и координаты кадров. Кнопка **Download occupied frames** сохраняет ZIP с заполненными кадрами и манифестом. Во встроенном примере в архиве будет шесть PNG.
+
+### Что входит в экспорт
+
+Программа учитывает только полные ячейки. Ячейка считается пустой, когда все её пиксели полностью прозрачны. PNG сохраняет исходный размер ячейки и прозрачность. Предпросмотр может быть увеличен или уменьшен.
+
+В JSON указаны размеры исходного листа, настройки сетки и кадры по строкам слева направо. Номера строк, столбцов и кадров в JSON начинаются с нуля. Координаты и границы видимой части измеряются в пикселях от левого верхнего угла исходного листа. У пустых кадров `bounds: null`.
+
+В ZIP входят PNG заполненных кадров и JSON со всеми ячейками. Номера в именах PNG начинаются с единицы и соответствуют исходной сетке. Архив сохраняет PNG без повторного сжатия.
+
+### Ограничения
+
+Поддерживаются PNG размером до 32 МиБ и 4096 × 4096 пикселей. В сетку входит до 512 полных ячеек. Для анимированных PNG используется изображение по умолчанию, включая отдельный кадр-постер. Положение кадров определяется сохранённым порядком пикселей PNG без учёта поворота в EXIF.
+
+### Разработка
+
+Для проверок запустите `npm test` в Node.js 20 или новее. У веб-приложения нет дополнительных зависимостей.
+
+Проект распространяется по [лицензии MIT](LICENSE).
