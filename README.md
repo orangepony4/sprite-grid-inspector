@@ -31,6 +31,8 @@ The JSON lists the source dimensions, grid settings, and frames in row-major ord
 
 The ZIP skips empty cells and keeps the original one-based frame numbers in the PNG filenames. The manifest describes every cell. Individual and archived PNG filenames use two digits for grids with up to 99 cells and three digits for larger grids, so sorting by filename preserves grid order. The ZIP stores the PNGs without recompressing them.
 
+While the browser prepares the ZIP, select **Cancel ZIP export** to stop it. The current frame finishes encoding, and no ZIP is downloaded. You can start a new export when the cancellation completes.
+
 ### Limits
 
 The browser accepts PNG files up to 32 MiB and 4096 × 4096 pixels. A grid can contain up to 512 full cells. Animated PNGs use their default still image, including files with a separate poster image. Frame positions follow the PNG's stored pixel orientation, regardless of EXIF rotation metadata.
@@ -67,6 +69,8 @@ Released under the [MIT License](LICENSE).
 В JSON указаны размеры исходного листа, настройки сетки и кадры по строкам слева направо. Номера строк, столбцов и кадров в JSON начинаются с нуля. Координаты и границы видимой части измеряются в пикселях от левого верхнего угла исходного листа. У пустых кадров `bounds: null`.
 
 В ZIP входят PNG заполненных кадров и JSON со всеми ячейками. Номера в именах PNG начинаются с единицы и соответствуют исходной сетке. В именах отдельных PNG и файлов в архиве используются две цифры для сеток до 99 ячеек и три для сеток от 100 ячеек. Сортировка по имени сохраняет порядок кадров. Архив сохраняет PNG без повторного сжатия.
+
+Во время подготовки архива нажмите **Отменить экспорт ZIP**, чтобы остановить выгрузку. Браузер завершит кодирование текущего кадра, и ZIP не будет скачан. После завершения отмены можно запустить экспорт снова.
 
 ### Ограничения
 

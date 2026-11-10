@@ -17,6 +17,7 @@
     const frameExportStatus = byId('frameExportStatus');
     const downloadManifest = byId('downloadManifest');
     const downloadBatch = byId('downloadBatch');
+    const cancelBatch = byId('cancelBatch');
     const manifestExportStatus = byId('manifestExportStatus');
     const exportStatus = byId('exportStatus');
     const languageToggle = byId('languageToggle');
@@ -51,6 +52,8 @@
         frameFailed: ['Could not export the frame.', 'Не удалось сохранить кадр.'],
         manifestSaved: ['Grid exported as JSON.', 'Сетка сохранена как JSON.'],
         preparingZip: ['Preparing {0} occupied frames…', 'Готовим заполненные кадры ({0})…'],
+        cancelingZip: ['Canceling ZIP export…', 'Отменяем экспорт ZIP…'],
+        zipCanceled: ['ZIP export canceled.', 'Экспорт ZIP отменён.'],
         zipSaved: ['Exported {0} PNG files and the grid manifest.', 'Сохранён ZIP с файлами PNG ({0}) и манифестом сетки.'],
         zipFailed: ['Could not export the frame ZIP.', 'Не удалось сохранить ZIP с кадрами.'],
         previousZip: ['This ZIP export uses the grid that was open when it started.', 'Для этого ZIP используется сетка, открытая на момент начала экспорта.'],
@@ -333,7 +336,7 @@
         const empty = frames.filter(frame => frame.empty).length;
         setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
         setExportButtonState(downloadManifest, true);
-        refreshBatchButton();
+        refreshBatchControls();
         renderFrameList();
         renderSelectedFrame(frames[oldIndex] ?? frames[0]);
         if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
@@ -356,7 +359,7 @@
             frameList.replaceChildren();
             setMessage(gridSummary, 'inspectFrames');
             setExportButtonState(downloadManifest, false);
-            refreshBatchButton();
+            refreshBatchControls();
             renderSelectedFrame(null);
         }
     }
@@ -442,11 +445,15 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    function exportFocusFallback() {
+        return grid ? downloadManifest : byId('applyGrid');
+    }
+
     function setExportButtonState(button, available, pending = false) {
         // A pending export keeps its keyboard focus while blocking repeat activation.
         const disabled = !pending && !available;
         if (disabled && document.activeElement === button) {
-            (grid ? downloadManifest : byId('applyGrid')).focus();
+            exportFocusFallback().focus();
         }
         button.disabled = disabled;
         if (pending) button.setAttribute('aria-disabled', 'true');
@@ -459,8 +466,13 @@
             pendingFrame ? frameNumber(pendingFrame) : null);
     }
 
-    function refreshBatchButton() {
+    function refreshBatchControls() {
         setExportButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), pendingBatch);
+        if (!pendingBatch && document.activeElement === cancelBatch) {
+            (downloadBatch.disabled ? exportFocusFallback() : downloadBatch).focus();
+        }
+        cancelBatch.hidden = !pendingBatch;
+        setExportButtonState(cancelBatch, true, pendingBatch?.cancelRequested);
     }
 
     function setBatchMessage(key) {
@@ -473,7 +485,7 @@
 
     function resetGridExportFeedback() {
         setMessage(manifestExportStatus);
-        if (pendingBatch) setBatchMessage('preparingZip');
+        if (pendingBatch) setBatchMessage(pendingBatch.cancelRequested ? 'cancelingZip' : 'preparingZip');
         else setMessage(exportStatus);
     }
 
@@ -561,29 +573,40 @@
         saveFile(blob, 'sprite-grid.json');
         setMessage(manifestExportStatus, 'manifestSaved');
     });
+    cancelBatch.addEventListener('click', () => {
+        if (!pendingBatch || pendingBatch.cancelRequested) return;
+        pendingBatch.cancelRequested = true;
+        refreshBatchControls();
+        setBatchMessage('cancelingZip');
+    });
     downloadBatch.addEventListener('click', async () => {
         if (pendingBatch || downloadBatch.disabled) return;
         const canvas = source.canvas;
         const frameCount = grid.frames.length;
         const frames = grid.frames.filter(frame => !frame.empty);
         const manifest = new TextEncoder().encode(manifestContent(source, grid));
-        pendingBatch = { grid, count: frames.length };
-        refreshBatchButton();
+        const batch = { grid, count: frames.length, cancelRequested: false };
+        pendingBatch = batch;
+        refreshBatchControls();
         setBatchMessage('preparingZip');
         try {
             const entries = [];
             for (const frame of frames) {
                 const png = await frameBlob(canvas, frame);
-                entries.push({ name: frameFilename(frame, frameCount), bytes: new Uint8Array(await png.arrayBuffer()) });
+                if (batch.cancelRequested) return;
+                const bytes = new Uint8Array(await png.arrayBuffer());
+                if (batch.cancelRequested) return;
+                entries.push({ name: frameFilename(frame, frameCount), bytes });
             }
             entries.push({ name: 'sprite-grid.json', bytes: manifest });
             saveFile(buildStoredZip(entries), 'sprite-frames.zip');
             setBatchMessage('zipSaved');
         } catch (error) {
-            showError(exportStatus, error, 'zipFailed', grid !== pendingBatch.grid ? 'previousZip' : undefined);
+            if (!batch.cancelRequested) showError(exportStatus, error, 'zipFailed', grid !== batch.grid ? 'previousZip' : undefined);
         } finally {
+            if (batch.cancelRequested) setBatchMessage('zipCanceled');
             pendingBatch = undefined;
-            refreshBatchButton();
+            refreshBatchControls();
         }
     });
 
