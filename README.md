@@ -25,7 +25,7 @@ The first visit opens in English. Choose **RU** or **EN** in the header to switc
 
 ### Export details
 
-Only full cells are included. A cell is empty when every pixel has zero alpha. The browser encodes the selected cell as a fresh PNG at its original dimensions and keeps its transparency. The preview may be scaled to fit.
+Only full cells are included. A cell is empty when every pixel has zero alpha. The browser encodes the selected cell as a fresh PNG at its original dimensions and keeps its transparency. The preview may be scaled to fit and can enlarge very thin strips along their short side.
 
 The JSON lists the source dimensions, grid settings, and frames in row-major order. Frame indexes, rows, and columns start at zero. Coordinates and nonempty bounds use source-image pixels measured from its top-left corner. Empty frames have `bounds: null`.
 
@@ -64,7 +64,7 @@ Released under the [MIT License](LICENSE).
 
 ### Что входит в экспорт
 
-Программа учитывает только полные ячейки. Ячейка считается пустой, когда все её пиксели полностью прозрачны. PNG сохраняет исходный размер ячейки и прозрачность. Предпросмотр может быть увеличен или уменьшен.
+Программа учитывает только полные ячейки. Ячейка считается пустой, когда все её пиксели полностью прозрачны. PNG сохраняет исходный размер ячейки и прозрачность. Предпросмотр может быть увеличен или уменьшен. Очень узкие полосы в предпросмотре могут быть растянуты по короткой стороне.
 
 В JSON указаны размеры исходного листа, настройки сетки и кадры по строкам слева направо. Номера строк, столбцов и кадров в JSON начинаются с нуля. Координаты и границы видимой части измеряются в пикселях от левого верхнего угла исходного листа. У пустых кадров `bounds: null`.
 

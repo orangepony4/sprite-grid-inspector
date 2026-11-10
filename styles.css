@@ -276,7 +276,7 @@ canvas {
 }
 
 canvas[hidden] { display: none; }
-#sheetCanvas { cursor: crosshair; }
+#sheetCanvas { min-inline-size: 8px; min-block-size: 8px; cursor: crosshair; }
 #frameCanvas { max-block-size: 100%; }
 
 .sheet-caption { margin-top: .58rem; }

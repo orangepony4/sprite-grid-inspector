@@ -134,10 +134,10 @@
         return { canvas, context: canvas.getContext('2d', { willReadFrequently: true }) };
     }
 
-    function displayContext(canvas, width, height, maxWidth, maxHeight) {
+    function displayContext(canvas, width, height, maxWidth, maxHeight, minExtent = 1) {
         const scale = Math.min(8, maxWidth / width, maxHeight / height);
-        canvas.width = Math.max(1, Math.round(width * scale));
-        canvas.height = Math.max(1, Math.round(height * scale));
+        canvas.width = Math.max(minExtent, Math.round(width * scale));
+        canvas.height = Math.max(minExtent, Math.round(height * scale));
         const context = canvas.getContext('2d');
         context.imageSmoothingEnabled = false;
         return context;
@@ -145,15 +145,18 @@
 
     function renderSheet() {
         const { canvas, width, height } = source;
-        const context = displayContext(sheetCanvas, width, height, 640, 400);
+        const context = displayContext(sheetCanvas, width, height, 640, 400, 8);
         context.drawImage(canvas, 0, 0, sheetCanvas.width, sheetCanvas.height);
         if (!grid) return;
 
         const scaleX = sheetCanvas.width / width;
         const scaleY = sheetCanvas.height / height;
+        const cellExtent = Math.min(grid.cellWidth * scaleX, grid.cellHeight * scaleY);
         const strokeFrame = frame => context.strokeRect(
             frame.x * scaleX, frame.y * scaleY, frame.width * scaleX, frame.height * scaleY,
         );
+        // Adjacent outlines share an edge, so keep strokes thin on dense previews.
+        context.lineWidth = Math.min(1, cellExtent / 6);
         for (const frame of grid.frames) {
             context.strokeStyle = frame.empty ? '#697185' : '#263852';
             context.setLineDash(frame.empty ? [3, 3] : []);
@@ -161,10 +164,11 @@
         }
         if (selected) {
             context.setLineDash([]);
-            context.lineWidth = 4;
+            const outline = Math.min(4, cellExtent / 2);
+            context.lineWidth = outline;
             context.strokeStyle = '#172338';
             strokeFrame(selected);
-            context.lineWidth = 2;
+            context.lineWidth = outline / 2;
             context.strokeStyle = '#FFE27A';
             strokeFrame(selected);
         }
