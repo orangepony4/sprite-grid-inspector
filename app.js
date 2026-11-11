@@ -390,14 +390,14 @@
         loadVersion++;
         fileInput.value = '';
         const { canvas, context } = createSourceCanvas(64, 32);
-        const ink = { '#': '#233148', g: '#54B89D', G: '#B7EBB3', p: '#A389E9', P: '#E2D5FF', y: '#F0B75A', Y: '#FFE49A', b: '#5198CC', B: '#B5E1FF' };
+        const ink = { '#': '#233148', r: '#C8617A', R: '#F6B5C7', p: '#A389E9', P: '#E2D5FF', y: '#F0B75A', Y: '#FFE49A', b: '#5198CC', B: '#B5E1FF' };
         const sprites = [
-            [0, ['...##...', '..#GG#..', '.#GGGg#.', '#GGGGgg#', '#GGgggg#', '.#gggg#.', '..####..']],
+            [0, ['...##...', '..#RR#..', '.#RRRr#.', '#RRRRrr#', '#RRrrrr#', '.#rrrr#.', '..####..']],
             [1, ['..####..', '.#PPpp#.', '#PPPPPp#', '#P#PP#p#', '#PPPPPp#', '#PPpppp#', '.##..##.']],
             [2, ['....##..', '...#YY#.', '..#YYYy#', '.#YYYy#.', '#YYyy#..', '.#Yy#...', '..##....']],
             [4, ['.######.', '#BBBBBb#', '#B#BB#b#', '#BBBBbb#', '.#bbbb#.', '..#bb#..', '...##...']],
             [5, ['...##...', '..#YY#..', '.#YYYY#.', '#YYYYyy#', '.#YYYY#.', '..#yy#..', '...##...']],
-            [6, ['...##...', '..#GG#..', '.#GGgg#.', '#GGgggg#', '...##...', '...##...', '..####..']],
+            [6, ['...##...', '..#RR#..', '.#RRrr#.', '#RRrrrr#', '...##...', '...##...', '..####..']],
         ];
         for (const [index, rows] of sprites) {
             rows.forEach((row, y) => [...row].forEach((pixel, x) => {

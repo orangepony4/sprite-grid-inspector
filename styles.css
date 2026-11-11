@@ -2,14 +2,14 @@
     color-scheme: light;
     --paper: #f5f2ea;
     --surface: #fcfbf7;
-    --ink: #272920;
-    --muted: #5e6054;
+    --ink: #292433;
+    --muted: #5b5168;
     --line: #d8d0c0;
     --control-line: #918a7a;
-    --accent: #245442;
-    --accent-dark: #183f32;
+    --accent: #4e367c;
+    --accent-dark: #3d2a63;
     --tint: #eee9dd;
-    --selected: #e7eee4;
+    --selected: #eae4f2;
     --error: #883b30;
     --mono: ui-monospace, Consolas, monospace;
     --serif: Georgia, "Times New Roman", serif;
@@ -96,7 +96,7 @@ button:disabled, button[aria-disabled="true"]:not(:focus-visible) { opacity: .55
     background:
         linear-gradient(var(--accent), var(--accent)) center / .1rem 100% no-repeat,
         linear-gradient(var(--accent), var(--accent)) center / 100% .1rem no-repeat,
-        conic-gradient(#f3efdc 0 25%, #91af98 25% 50%, #f3efdc 50% 100%);
+        conic-gradient(var(--surface) 0 25%, #c6b5de 25% 50%, var(--surface) 50% 100%);
 }
 
 .local-label, .panel-note {
