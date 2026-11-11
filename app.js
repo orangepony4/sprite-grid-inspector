@@ -1,10 +1,15 @@
 (() => {
     'use strict';
 
-    const { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames } = globalThis.SpriteGrid;
+    const {
+        inspectPngHeader, findPngDecodeOmissions, makeGrid, readGridManifest,
+        frameAtPoint, frameForSelection, inspectFrames,
+    } = globalThis.SpriteGrid;
     const { buildStoredZip } = globalThis.SpriteZip;
     const byId = id => document.getElementById(id);
     const fileInput = byId('fileInput');
+    const manifestInput = byId('manifestInput');
+    const manifestLoadStatus = byId('manifestLoadStatus');
     const loadStatus = byId('loadStatus');
     const gridError = byId('gridError');
     const gridSummary = byId('gridSummary');
@@ -24,8 +29,9 @@
     const defaults = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
     const settings = Object.keys(defaults).map(key => [key, byId(key)]);
     const byteLimit = 32 * 1024 * 1024;
+    const manifestByteLimit = 1024 * 1024;
     const messages = {
-        switchLanguage: ['Switch to Russian', 'Переключить на английский'],
+        switchLanguage: ['RU · Switch to Russian', 'EN · Переключить на английский'],
         frame: ['Frame {0}', 'Кадр {0}'],
         occupied: ['Occupied', 'Заполнен'],
         empty: ['Empty', 'Пуст'],
@@ -46,6 +52,10 @@
         decodeFailed: ['The browser could not decode this PNG.', 'Браузер не смог декодировать этот PNG.'],
         dimensionMismatch: ['Decoded image dimensions do not match the PNG header.', 'Размер изображения не совпадает с размером в заголовке PNG.'],
         loadFailed: ['Could not open the PNG.', 'Не удалось открыть PNG.'],
+        manifestReading: ['Reading grid JSON…', 'Читаем JSON сетки…'],
+        manifestLoaded: ['Grid settings loaded from JSON.', 'Настройки сетки загружены из JSON.'],
+        manifestTooLarge: ['Choose a grid JSON file of at most 1 MiB.', 'Выберите JSON-файл сетки размером до 1 МиБ.'],
+        manifestLoadFailed: ['Could not load the grid JSON.', 'Не удалось загрузить JSON сетки.'],
         preparingFrame: ['Preparing Frame {0} PNG…', 'Готовим PNG для кадра {0}…'],
         encodeFailed: ['The browser could not encode Frame {0} as PNG.', 'Браузер не смог сохранить кадр {0} как PNG.'],
         frameSaved: ['Frame {0} exported as PNG.', 'Кадр {0} сохранён как PNG.'],
@@ -80,6 +90,7 @@
     let frameButtons = [];
     let tabStop;
     let loadVersion = 0;
+    let manifestLoadVersion = 0;
     let pendingBatch;
     let pendingFrame;
 
@@ -334,13 +345,33 @@
         return invalidInput;
     }
 
+    function inspectGrid(options) {
+        const { columns, rows, frames } = makeGrid(source.width, source.height, options);
+        return { ...options, columns, rows, frames: inspectFrames(source.rgba, source.width, source.height, frames) };
+    }
+
+    function showGrid(nextGrid, focusedIndex) {
+        const { columns, rows, frames } = nextGrid;
+        const nextSelection = frameForSelection(frames, selected);
+        selected = null;
+        grid = nextGrid;
+        resetGridExportFeedback();
+        setMessage(gridError);
+        markInvalidGridField();
+        const empty = frames.filter(frame => frame.empty).length;
+        setMessage(gridSummary, 'gridSummary', columns, rows, frames.length, frames.length - empty, empty);
+        setExportButtonState(downloadManifest, true);
+        refreshBatchControls();
+        renderFrameList();
+        renderSelectedFrame(nextSelection);
+        if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
+    }
+
     function applyGrid(focusedIndex, focusInvalidField = false) {
         const options = Object.fromEntries(settings.map(([key, input]) => [key, input.valueAsNumber]));
-        let layout;
-        let frames;
+        let nextGrid;
         try {
-            layout = makeGrid(source.width, source.height, options);
-            frames = inspectFrames(source.rgba, source.width, source.height, layout.frames);
+            nextGrid = inspectGrid(options);
         } catch (error) {
             showError(gridError, error, 'gridFailed', grid ? 'previousGrid' : undefined);
             const invalidInput = markInvalidGridField(error?.gridField);
@@ -348,20 +379,7 @@
             else if (!grid && focusedIndex !== null) byId('applyGrid').focus();
             return;
         }
-
-        const nextSelection = frameForSelection(frames, selected);
-        selected = null;
-        grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
-        resetGridExportFeedback();
-        setMessage(gridError);
-        markInvalidGridField();
-        const empty = frames.filter(frame => frame.empty).length;
-        setMessage(gridSummary, 'gridSummary', layout.columns, layout.rows, frames.length, frames.length - empty, empty);
-        setExportButtonState(downloadManifest, true);
-        refreshBatchControls();
-        renderFrameList();
-        renderSelectedFrame(nextSelection);
-        if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
+        showGrid(nextGrid, focusedIndex);
     }
 
     function useSource(canvas, context, fileName) {
@@ -388,6 +406,8 @@
 
     function loadDemo() {
         loadVersion++;
+        resetManifestLoad();
+        manifestInput.disabled = false;
         fileInput.value = '';
         const { canvas, context } = createSourceCanvas(64, 32);
         const ink = { '#': '#233148', r: '#C8617A', R: '#F6B5C7', p: '#A389E9', P: '#E2D5FF', y: '#F0B75A', Y: '#FFE49A', b: '#5198CC', B: '#B5E1FF' };
@@ -412,6 +432,8 @@
 
     async function loadFile(file) {
         const version = ++loadVersion;
+        resetManifestLoad();
+        manifestInput.disabled = true;
         loadStatus.dataset.error = 'false';
         setMessage(loadStatus, 'reading');
         let bitmap;
@@ -452,7 +474,33 @@
             loadStatus.dataset.error = 'true';
             showError(loadStatus, error, 'loadFailed');
         } finally {
+            if (version === loadVersion) manifestInput.disabled = false;
             bitmap?.close();
+        }
+    }
+
+    function resetManifestLoad() {
+        manifestLoadVersion++;
+        setMessage(manifestLoadStatus);
+    }
+
+    async function loadManifest(file) {
+        const version = ++manifestLoadVersion;
+        manifestLoadStatus.dataset.error = 'false';
+        setMessage(manifestLoadStatus, 'manifestReading');
+        try {
+            if (file.size > manifestByteLimit) throw appError('manifestTooLarge');
+            const text = await file.text();
+            if (version !== manifestLoadVersion) return;
+            const options = readGridManifest(text, source.width, source.height);
+            const nextGrid = inspectGrid(options);
+            for (const [key, input] of settings) input.value = options[key];
+            showGrid(nextGrid, focusedFrameIndex());
+            setMessage(manifestLoadStatus, 'manifestLoaded');
+        } catch (error) {
+            if (version !== manifestLoadVersion) return;
+            manifestLoadStatus.dataset.error = 'true';
+            showError(manifestLoadStatus, error, 'manifestLoadFailed');
         }
     }
 
@@ -534,9 +582,17 @@
         fileInput.value = '';
         if (file) void loadFile(file);
     });
+    manifestInput.addEventListener('change', () => {
+        const file = manifestInput.files[0];
+        manifestInput.value = '';
+        if (file && !manifestInput.disabled) void loadManifest(file);
+    });
     byId('loadDemo').addEventListener('click', loadDemo);
-    byId('gridForm').addEventListener('submit', event => {
+    const gridForm = byId('gridForm');
+    gridForm.addEventListener('input', resetManifestLoad);
+    gridForm.addEventListener('submit', event => {
         event.preventDefault();
+        resetManifestLoad();
         applyGrid(focusedFrameIndex(), true);
     });
 

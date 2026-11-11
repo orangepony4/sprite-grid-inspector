@@ -212,10 +212,13 @@ h2 { font-size: clamp(1.55rem, 2.45vw, 2rem); line-height: 1.14; }
     cursor: pointer;
 }
 
-#fileInput:focus-visible + label {
+.file-picker input:focus-visible + label {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
 }
+
+.file-picker input:disabled + label { cursor: default; opacity: .65; }
+.grid-manifest-picker, #manifestLoadStatus:not(:empty) { margin-top: .5rem; }
 
 input[type="number"] {
     display: block;

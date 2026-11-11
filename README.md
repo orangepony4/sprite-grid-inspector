@@ -23,6 +23,8 @@ The first visit opens in English. Choose **RU** or **EN** in the header to switc
 
 When you adjust the grid, the selection follows the center of the previous cell. If that point falls outside the new cells, the closest complete cell is selected. Opening a new sheet selects its first cell when a valid grid fits.
 
+To reopen a grid, choose a PNG with the same dimensions as the original and select **Load grid JSON**. Use the manifest downloaded separately or extracted from the frame ZIP. The app applies the saved cell size, offsets, and gaps and checks the current PNG for empty cells and visible bounds.
+
 ![Sprite Grid Inspector showing the 64 × 32 demo sheet, grid controls, two empty cells, and a preview of the selected frame](docs/preview.webp)
 
 ### Export details
@@ -65,6 +67,8 @@ Released under the [MIT License](LICENSE).
 4. Кнопка **Скачать кадр PNG** сохраняет выбранную ячейку. **Скачать JSON-манифест** выгружает сетку и координаты кадров. Кнопка **Скачать заполненные кадры** сохраняет ZIP с заполненными кадрами и манифестом. Во встроенном примере в архиве будет шесть PNG.
 
 При изменении сетки выделение следует за центром предыдущей ячейки. Если эта точка не попадает в новые ячейки, выделяется ближайшая полная ячейка. При открытии нового листа выбирается первая ячейка, если на листе помещается корректная сетка.
+
+Чтобы восстановить сетку, выберите PNG того же размера, что и исходный лист, и нажмите **Загрузить сетку JSON**. Подойдёт отдельно скачанный манифест или файл из ZIP с кадрами. Приложение применит сохранённый размер ячеек, смещения и промежутки и заново проверит пустые кадры и видимые границы по открытому PNG.
 
 ### Что входит в экспорт
 

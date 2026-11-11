@@ -19,7 +19,7 @@
         <p class="brand"><span class="brand-mark" aria-hidden="true"></span> Sprite Grid Inspector</p>
         <div class="masthead-tools">
             <p class="local-label" data-ru="Обработка в браузере">Local processing</p>
-            <button class="button secondary language-toggle" type="button" id="languageToggle" aria-label="Switch to Russian" hidden>RU</button>
+            <button class="button secondary language-toggle" type="button" id="languageToggle" aria-label="RU · Switch to Russian" hidden>RU</button>
         </div>
     </header>
 
@@ -121,6 +121,11 @@
                     <p class="help" id="gridHelp" data-ru="Смещения отсчитываются от верхнего левого пикселя.">Offsets start at the top-left pixel.</p>
                     <p class="status error" id="gridError" role="status"></p>
                 </div>
+                <div class="file-picker grid-manifest-picker">
+                    <input type="file" id="manifestInput" class="sr-only" accept="application/json,.json" aria-describedby="manifestLoadStatus">
+                    <label for="manifestInput" class="button secondary" data-ru="Загрузить сетку JSON">Load grid JSON</label>
+                </div>
+                <p class="status" id="manifestLoadStatus" role="status"></p>
             </section>
 
             <section class="panel frame-index" aria-labelledby="framesHeading">

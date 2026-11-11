@@ -123,6 +123,29 @@
         return { columns, rows, frames };
     }
 
+    function readGridManifest(text, width, height) {
+        let manifest;
+        try {
+            manifest = JSON.parse(text);
+        } catch {
+            throw gridError('Choose a valid sprite grid JSON file.', 'Выберите корректный JSON-файл сетки.');
+        }
+        const image = manifest?.image;
+        const { cellWidth, cellHeight, offsetX, offsetY, gapX, gapY } = manifest?.grid ?? {};
+        const options = { cellWidth, cellHeight, offsetX, offsetY, gapX, gapY };
+        if (!Number.isSafeInteger(image?.width) || !Number.isSafeInteger(image?.height)
+            || !Object.values(options).every(Number.isSafeInteger)) {
+            throw gridError('The JSON must contain the sheet dimensions and all six grid settings.',
+                'В JSON должны быть указаны размеры листа и все шесть настроек сетки.');
+        }
+        validateDimensions(image.width, image.height);
+        if (image.width !== width || image.height !== height) {
+            throw gridError(`This grid is for a ${image.width} × ${image.height} px sheet. Open a PNG of that size first.`,
+                `Сетка рассчитана на лист ${image.width} × ${image.height} пкс. Сначала откройте PNG такого размера.`);
+        }
+        return options;
+    }
+
     function frameAtPoint(frames, x, y) {
         return frames.find(frame => x >= frame.x && x < frame.x + frame.width
             && y >= frame.y && y < frame.y + frame.height);
@@ -200,7 +223,10 @@
         });
     }
 
-    const api = { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames };
+    const api = {
+        inspectPngHeader, findPngDecodeOmissions, makeGrid, readGridManifest,
+        frameAtPoint, frameForSelection, inspectFrames,
+    };
     if (typeof module === 'object' && module.exports) {
         module.exports = api;
     } else {

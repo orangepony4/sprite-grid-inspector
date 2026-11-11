@@ -3,7 +3,32 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
-const { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames } = require('../grid.js');
+const {
+    inspectPngHeader, findPngDecodeOmissions, makeGrid, readGridManifest,
+    frameAtPoint, frameForSelection, inspectFrames,
+} = require('../grid.js');
+
+test('reads only geometry from a grid manifest for a PNG with matching dimensions', () => {
+    const options = { cellWidth: 12, cellHeight: 7, offsetX: 2, offsetY: 3, gapX: 4, gapY: 5 };
+    const text = JSON.stringify({
+        image: { width: 64, height: 32 },
+        grid: { ...options, columns: 999, rows: 999 },
+        frames: [{ index: 999, x: 999, empty: true }],
+    });
+    assert.deepEqual(readGridManifest(text, 64, 32), options);
+    assert.throws(() => readGridManifest(text, 32, 64), /64 × 32 px sheet/);
+});
+
+test('rejects malformed manifests, incomplete settings and noninteger coordinates', () => {
+    const image = { width: 64, height: 32 };
+    const grid = { cellWidth: 16, cellHeight: 16, offsetX: 0, offsetY: 0, gapX: 0, gapY: 0 };
+    assert.throws(() => readGridManifest('{', 64, 32), /valid sprite grid JSON/);
+    for (const manifest of [null, [], { image }, { image: { width: '64', height: 32 }, grid },
+        { image, grid: { ...grid, gapX: undefined } }, { image, grid: { ...grid, gapY: 0.5 } }]) {
+        assert.throws(() => readGridManifest(JSON.stringify(manifest), 64, 32), /all six grid settings/);
+    }
+    assert.throws(() => readGridManifest(JSON.stringify({ image: { width: 4097, height: 32 }, grid }), 64, 32), /4096/);
+});
 
 test('keeps selection near its source position when grid columns, gaps or offsets change', () => {
     const original = makeGrid(64, 32, { cellWidth: 16, cellHeight: 16 });
@@ -186,7 +211,8 @@ test('exposes the same API as a classic browser script', () => {
     const sandbox = vm.createContext({});
     vm.runInContext(source, sandbox);
     assert.deepEqual(Object.keys(sandbox.SpriteGrid), [
-        'inspectPngHeader', 'findPngDecodeOmissions', 'makeGrid', 'frameAtPoint', 'frameForSelection', 'inspectFrames',
+        'inspectPngHeader', 'findPngDecodeOmissions', 'makeGrid', 'readGridManifest',
+        'frameAtPoint', 'frameForSelection', 'inspectFrames',
     ]);
     assert.equal(sandbox.SpriteGrid.inspectPngHeader(pngHeader(9, 6)).width, 9);
 });
