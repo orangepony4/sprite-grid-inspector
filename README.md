@@ -21,6 +21,8 @@ The first visit opens in English. Choose **RU** or **EN** in the header to switc
 3. Select a cell in the sheet or in **Frame inspector**. With the frame list focused, use the arrow keys to move between cells and Home or End to go to the edges of the current row. Press Enter or Space to select the focused frame.
 4. Select **Download frame PNG** to save the current cell, **Download JSON manifest** to save the grid and frame positions, or **Download occupied frames** to save a ZIP. The demo ZIP contains six PNGs and the manifest.
 
+When you adjust the grid, the selection follows the center of the previous cell. If that point falls outside the new cells, the closest complete cell is selected. Opening a new sheet selects its first cell when a valid grid fits.
+
 ![Sprite Grid Inspector showing the 64 × 32 demo sheet, grid controls, two empty cells, and a preview of the selected frame](docs/preview.webp)
 
 ### Export details
@@ -61,6 +63,8 @@ Released under the [MIT License](LICENSE).
 2. Чтобы проверить свой лист, нажмите **Выбрать PNG**. Укажите ширину и высоту ячейки в пикселях. Смещения задают отступ сетки от левого и верхнего края. Промежутки задают расстояние между соседними ячейками. Нажмите **Применить сетку** или Enter в поле настроек. Если число введено неверно, фокус перейдёт в поле, которое нужно исправить.
 3. Выберите ячейку на листе или в списке **Кадры**. Когда фокус в списке, перемещайтесь по сетке стрелками, а к краям текущей строки переходите клавишами Home и End. Нажмите Enter или пробел, чтобы выбрать кадр.
 4. Кнопка **Скачать кадр PNG** сохраняет выбранную ячейку. **Скачать JSON-манифест** выгружает сетку и координаты кадров. Кнопка **Скачать заполненные кадры** сохраняет ZIP с заполненными кадрами и манифестом. Во встроенном примере в архиве будет шесть PNG.
+
+При изменении сетки выделение следует за центром предыдущей ячейки. Если эта точка не попадает в новые ячейки, выделяется ближайшая полная ячейка. При открытии нового листа выбирается первая ячейка, если на листе помещается корректная сетка.
 
 ### Что входит в экспорт
 

@@ -3,7 +3,22 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
-const { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames } = require('../grid.js');
+const { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames } = require('../grid.js');
+
+test('keeps selection near its source position when grid columns, gaps or offsets change', () => {
+    const original = makeGrid(64, 32, { cellWidth: 16, cellHeight: 16 });
+    const resized = makeGrid(64, 32, { cellWidth: 32, cellHeight: 16 });
+    assert.equal(frameForSelection(resized.frames, original.frames[4]), resized.frames[2]);
+    assert.equal(frameForSelection(resized.frames), resized.frames[0]);
+
+    const gapped = makeGrid(64, 32, { cellWidth: 8, cellHeight: 16, gapX: 14 });
+    assert.equal(frameAtPoint(gapped.frames, 16, 24), undefined);
+    assert.equal(frameForSelection(gapped.frames, resized.frames[2]), gapped.frames[4]);
+
+    const shifted = makeGrid(64, 32, { cellWidth: 8, cellHeight: 8, offsetX: 24, offsetY: 16 });
+    assert.equal(frameForSelection(shifted.frames, original.frames[0]), shifted.frames[0]);
+    assert.equal(frameAtPoint(shifted.frames, 32, 16), shifted.frames[1]);
+});
 
 function pngHeader(width, height) {
     const bytes = Buffer.alloc(33);
@@ -170,6 +185,8 @@ test('exposes the same API as a classic browser script', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'grid.js'), 'utf8');
     const sandbox = vm.createContext({});
     vm.runInContext(source, sandbox);
-    assert.deepEqual(Object.keys(sandbox.SpriteGrid), ['inspectPngHeader', 'findPngDecodeOmissions', 'makeGrid', 'inspectFrames']);
+    assert.deepEqual(Object.keys(sandbox.SpriteGrid), [
+        'inspectPngHeader', 'findPngDecodeOmissions', 'makeGrid', 'frameAtPoint', 'frameForSelection', 'inspectFrames',
+    ]);
     assert.equal(sandbox.SpriteGrid.inspectPngHeader(pngHeader(9, 6)).width, 9);
 });

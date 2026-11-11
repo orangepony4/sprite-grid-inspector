@@ -123,6 +123,32 @@
         return { columns, rows, frames };
     }
 
+    function frameAtPoint(frames, x, y) {
+        return frames.find(frame => x >= frame.x && x < frame.x + frame.width
+            && y >= frame.y && y < frame.y + frame.height);
+    }
+
+    function frameForSelection(frames, previous) {
+        if (!previous) return frames[0];
+        const x = previous.x + previous.width / 2;
+        const y = previous.y + previous.height / 2;
+        const containing = frameAtPoint(frames, x, y);
+        if (containing) return containing;
+
+        let nearest;
+        let nearestDistance = Infinity;
+        for (const frame of frames) {
+            const dx = Math.max(0, frame.x - x, x - frame.x - frame.width);
+            const dy = Math.max(0, frame.y - y, y - frame.y - frame.height);
+            const distance = dx * dx + dy * dy;
+            if (distance < nearestDistance) {
+                nearest = frame;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
     function inspectFrames(rgba, width, height, frames) {
         validateDimensions(width, height);
         if (!ArrayBuffer.isView(rgba) || rgba.BYTES_PER_ELEMENT !== 1 || rgba.byteLength !== width * height * 4) {
@@ -174,7 +200,7 @@
         });
     }
 
-    const api = { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames };
+    const api = { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames };
     if (typeof module === 'object' && module.exports) {
         module.exports = api;
     } else {

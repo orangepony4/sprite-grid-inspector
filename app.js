@@ -1,7 +1,7 @@
 (() => {
     'use strict';
 
-    const { inspectPngHeader, findPngDecodeOmissions, makeGrid, inspectFrames } = globalThis.SpriteGrid;
+    const { inspectPngHeader, findPngDecodeOmissions, makeGrid, frameAtPoint, frameForSelection, inspectFrames } = globalThis.SpriteGrid;
     const { buildStoredZip } = globalThis.SpriteZip;
     const byId = id => document.getElementById(id);
     const fileInput = byId('fileInput');
@@ -349,7 +349,7 @@
             return;
         }
 
-        const oldIndex = selected?.index ?? 0;
+        const nextSelection = frameForSelection(frames, selected);
         selected = null;
         grid = { ...options, columns: layout.columns, rows: layout.rows, frames };
         resetGridExportFeedback();
@@ -360,7 +360,7 @@
         setExportButtonState(downloadManifest, true);
         refreshBatchControls();
         renderFrameList();
-        renderSelectedFrame(frames[oldIndex] ?? frames[0]);
+        renderSelectedFrame(nextSelection);
         if (focusedIndex !== null) focusFrame(Math.min(focusedIndex, frames.length - 1));
     }
 
@@ -567,8 +567,7 @@
         const rect = sheetCanvas.getBoundingClientRect();
         const x = (event.clientX - rect.left) * source.width / rect.width;
         const y = (event.clientY - rect.top) * source.height / rect.height;
-        const frame = grid.frames.find(cell => x >= cell.x && x < cell.x + cell.width &&
-            y >= cell.y && y < cell.y + cell.height);
+        const frame = frameAtPoint(grid.frames, x, y);
         if (frame) renderSelectedFrame(frame);
     });
 
