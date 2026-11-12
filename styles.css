@@ -349,9 +349,10 @@ canvas[hidden] { display: none; }
     padding-top: .85rem;
 }
 
-#exportStatus:not(:empty), #frameExportStatus:not(:empty) { margin-top: .5rem; }
+#exportStatus:not(:empty), #frameExportStatus:not(:empty), #playbackStatus:not(:empty) { margin-top: .5rem; }
 .details { margin-top: .58rem; }
-#downloadFrame { margin-top: .65rem; }
+.frame-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .65rem; }
+.frame-actions .button { max-inline-size: 100%; overflow-wrap: anywhere; }
 
 .footer {
     margin-block: 1rem 1.5rem;

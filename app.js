@@ -18,6 +18,8 @@
     const frameCanvas = byId('frameCanvas');
     const frameList = byId('frameList');
     const frameDetails = byId('frameDetails');
+    const playRow = byId('playRow');
+    const playbackStatus = byId('playbackStatus');
     const downloadFrame = byId('downloadFrame');
     const frameExportStatus = byId('frameExportStatus');
     const downloadManifest = byId('downloadManifest');
@@ -30,6 +32,7 @@
     const settings = Object.keys(defaults).map(key => [key, byId(key)]);
     const byteLimit = 32 * 1024 * 1024;
     const manifestByteLimit = 1024 * 1024;
+    const playbackFps = 6;
     const messages = {
         switchLanguage: ['RU · Switch to Russian', 'EN · Переключить на английский'],
         frame: ['Frame {0}', 'Кадр {0}'],
@@ -41,6 +44,10 @@
         zoomedBounds: ['Preview zoomed to visible pixels.', 'Предпросмотр увеличен до видимой области.'],
         zoomedPixel: ['Preview zoomed to one visible pixel.', 'Предпросмотр увеличен до одного видимого пикселя.'],
         chooseFrame: ['Apply a valid grid to select a frame.', 'Примените корректную сетку, чтобы выбрать кадр.'],
+        playRow: ['Play selected row', 'Проиграть выбранную строку'],
+        stopRow: ['Stop animation', 'Остановить анимацию'],
+        playingRow: ['Playing row {0} at {1} fps. Details and PNG use the selected frame.',
+            'Строка {0} · {1} кадров в секунду. Свойства и PNG относятся к выбранному кадру.'],
         inspectFrames: ['Apply a valid grid to inspect frames.', 'Примените корректную сетку, чтобы проверить кадры.'],
         gridSummary: ['{0} columns × {1} rows · {2} frames · {3} occupied · {4} empty', 'Сетка {0} × {1} · Кадров {2} · Заполнено {3} · Пусто {4}'],
         previousGrid: ['The previous grid is still shown.', 'На экране осталась предыдущая сетка.'],
@@ -93,6 +100,7 @@
     let manifestLoadVersion = 0;
     let pendingBatch;
     let pendingFrame;
+    let rowPlaybackTimer;
 
     function translate(key, ...args) {
         const template = messages[key][language === 'ru' ? 1 : 0];
@@ -249,8 +257,8 @@
         revealIn(frameList, tabStop.getBoundingClientRect());
     }
 
-    function drawFramePreview(area) {
-        const context = displayContext(frameCanvas, area.width, area.height, 192, 192);
+    function drawFramePreview(area, context = displayContext(frameCanvas, area.width, area.height, 192, 192)) {
+        context.clearRect(0, 0, frameCanvas.width, frameCanvas.height);
         context.drawImage(source.canvas, area.x, area.y, area.width, area.height,
             0, 0, frameCanvas.width, frameCanvas.height);
         return context;
@@ -282,9 +290,11 @@
     }
 
     function renderSelectedFrame(frame) {
+        stopRowPlayback();
         if (selected) frameButtons[selected.index]?.setAttribute('aria-pressed', 'false');
         selected = frame;
         refreshFrameExport();
+        setActionButtonState(playRow, frame && grid.columns > 1);
         frameCanvas.hidden = !frame;
         if (!frame) {
             frameCanvas.width = 1;
@@ -305,6 +315,36 @@
         });
         renderSheet();
         revealSelection(frame);
+    }
+
+    function stopRowPlayback() {
+        if (rowPlaybackTimer === undefined) return false;
+        clearInterval(rowPlaybackTimer);
+        rowPlaybackTimer = undefined;
+        setMessage(playRow, 'playRow');
+        setMessage(playbackStatus);
+        return true;
+    }
+
+    function toggleRowPlayback() {
+        if (stopRowPlayback()) {
+            renderFramePreview(selected);
+            return;
+        }
+        if (playRow.disabled) return;
+
+        const first = selected.row * grid.columns;
+        const frames = grid.frames.slice(first, first + grid.columns);
+        const context = displayContext(frameCanvas, selected.width, selected.height, 192, 192);
+        let column = 0;
+        const advance = () => {
+            drawFramePreview(frames[column], context);
+            column = (column + 1) % frames.length;
+        };
+        advance();
+        rowPlaybackTimer = setInterval(advance, 1000 / playbackFps);
+        setMessage(playRow, 'stopRow');
+        setMessage(playbackStatus, 'playingRow', selected.row + 1, playbackFps);
     }
 
     function updateFrameButton(button, frame) {
@@ -360,7 +400,7 @@
         markInvalidGridField();
         const empty = frames.filter(frame => frame.empty).length;
         setMessage(gridSummary, 'gridSummary', columns, rows, frames.length, frames.length - empty, empty);
-        setExportButtonState(downloadManifest, true);
+        setActionButtonState(downloadManifest, true);
         refreshBatchControls();
         renderFrameList();
         renderSelectedFrame(nextSelection);
@@ -383,6 +423,7 @@
     }
 
     function useSource(canvas, context, fileName) {
+        stopRowPlayback();
         const focusedIndex = focusedFrameIndex();
         const { width, height } = canvas;
         const rgba = context.getImageData(0, 0, width, height).data;
@@ -398,7 +439,7 @@
             frameButtons = [];
             frameList.replaceChildren();
             setMessage(gridSummary, 'inspectFrames');
-            setExportButtonState(downloadManifest, false);
+            setActionButtonState(downloadManifest, false);
             refreshBatchControls();
             renderSelectedFrame(null);
         }
@@ -431,6 +472,7 @@
     }
 
     async function loadFile(file) {
+        if (stopRowPlayback()) renderFramePreview(selected);
         const version = ++loadVersion;
         resetManifestLoad();
         manifestInput.disabled = true;
@@ -519,7 +561,7 @@
         return grid ? downloadManifest : byId('applyGrid');
     }
 
-    function setExportButtonState(button, available, pending = false) {
+    function setActionButtonState(button, available, pending = false) {
         // A pending export keeps its keyboard focus while blocking repeat activation.
         const disabled = !pending && !available;
         if (disabled && document.activeElement === button) {
@@ -531,18 +573,18 @@
     }
 
     function refreshFrameExport() {
-        setExportButtonState(downloadFrame, selected, pendingFrame);
+        setActionButtonState(downloadFrame, selected, pendingFrame);
         setMessage(frameExportStatus, pendingFrame && pendingFrame === selected ? 'preparingFrame' : null,
             pendingFrame ? frameNumber(pendingFrame) : null);
     }
 
     function refreshBatchControls() {
-        setExportButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), pendingBatch);
+        setActionButtonState(downloadBatch, grid?.frames.some(frame => !frame.empty), pendingBatch);
         if (!pendingBatch && document.activeElement === cancelBatch) {
             (downloadBatch.disabled ? exportFocusFallback() : downloadBatch).focus();
         }
         cancelBatch.hidden = !pendingBatch;
-        setExportButtonState(cancelBatch, true, pendingBatch?.cancelRequested);
+        setActionButtonState(cancelBatch, true, pendingBatch?.cancelRequested);
     }
 
     function setBatchMessage(key) {
@@ -627,6 +669,8 @@
         if (frame) renderSelectedFrame(frame);
     });
 
+    playRow.addEventListener('click', toggleRowPlayback);
+
     downloadFrame.addEventListener('click', async () => {
         if (!selected || pendingFrame) return;
         const frame = selected;
@@ -641,7 +685,7 @@
             if (selected === frame) showError(frameExportStatus, error, 'frameFailed');
         } finally {
             pendingFrame = undefined;
-            setExportButtonState(downloadFrame, selected, false);
+            setActionButtonState(downloadFrame, selected, false);
         }
     });
     downloadManifest.addEventListener('click', () => {
@@ -696,6 +740,7 @@
             // The current page still uses the selected language.
         }
     });
+    setMessage(playRow, 'playRow');
     applyLanguage();
     languageToggle.hidden = false;
     loadDemo();

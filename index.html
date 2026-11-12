@@ -156,10 +156,14 @@
                     </div>
                 </header>
                 <div class="frame-viewport">
-                    <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Selected sprite frame preview" data-ru-label="Просмотр выбранного кадра"></canvas>
+                    <canvas id="frameCanvas" width="1" height="1" role="img" aria-label="Sprite preview" data-ru-label="Предпросмотр спрайта"></canvas>
                 </div>
                 <p class="status details" id="frameDetails" role="status"></p>
-                <button class="button secondary" type="button" id="downloadFrame" data-ru="Скачать кадр PNG" disabled>Download frame PNG</button>
+                <div class="frame-actions">
+                    <button class="button secondary" type="button" id="playRow" aria-controls="frameCanvas" disabled>Play selected row</button>
+                    <button class="button secondary" type="button" id="downloadFrame" data-ru="Скачать кадр PNG" disabled>Download frame PNG</button>
+                </div>
+                <p class="status" id="playbackStatus" role="status"></p>
                 <p class="status" id="frameExportStatus" role="status"></p>
             </section>
         </div>
